@@ -60,9 +60,9 @@ grails.project.dependency.resolution = {
 
     plugins {
       
-      runtime ':hibernate:3.6.10.2'
+      //runtime ':hibernate:3.6.10.2'
       runtime ":jquery:1.8.3"
-      runtime ":resources:1.2"
+      //runtime ":resources:1.2"
       runtime ':gsp-resources:0.4.4'
 
       // Uncomment these (or add new ones) to enable additional resources capabilities
@@ -70,7 +70,7 @@ grails.project.dependency.resolution = {
       //runtime ":cached-resources:1.0"
       //runtime ":yui-minify-resources:0.1.4"
 
-      build ':tomcat:7.0.40.1'
+      //build ':tomcat:7.0.40.1'
 
       runtime ":database-migration:1.3.3"
 
@@ -100,5 +100,10 @@ grails.project.dependency.resolution = {
       compile ':jquery-ui:1.8.24'
       compile ':rest:0.7'
       compile ':twitter-bootstrap:2.3.2'
+      
+      /** Recommended upgrades for 2.3.7 **/
+      runtime ':hibernate:3.6.10.10'
+      build ':tomcat:7.0.52.1'
+      runtime ':resources:1.2.7'
     }
 }
