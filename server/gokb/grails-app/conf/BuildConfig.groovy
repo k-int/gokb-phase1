@@ -56,6 +56,7 @@ grails.project.dependency.resolution = {
         runtime 'org.apache.tika:tika-core:1.4'
         runtime 'xalan:xalan:2.7.1'
         compile 'org.elasticsearch:elasticsearch-lang-groovy:1.4.0'
+        compile 'org.ajoberstar:grgit:0.2.3'
     }
 
     plugins {
@@ -63,7 +64,6 @@ grails.project.dependency.resolution = {
       //runtime ':hibernate:3.6.10.2'
       runtime ":jquery:1.8.3"
       //runtime ":resources:1.2"
-      runtime ':gsp-resources:0.4.4'
 
       // Uncomment these (or add new ones) to enable additional resources capabilities
       //runtime ":zipped-resources:1.0"
@@ -87,12 +87,16 @@ grails.project.dependency.resolution = {
          excludes 'spring-test'
       }
       
-      // Font awesome for font based icons.
-      compile ":font-awesome-resources:3.2.1"
-      
       // Job scheduler plugin.
       compile ":quartz:1.0.1"
       
+      runtime ':gsp-resources:0.4.4', {
+        excludes 'resources'
+      }
+      compile ":font-awesome-resources:3.2.1", {
+        excludes 'resources'
+      }
+            
       /** Moved plugins from the properties file to here **/
       compile ':audit-logging:0.5.4' // SO: Tried upgrading to 0.5.5.3, but this caused a null pointer to be thrown.
       compile ':executor:0.3'
@@ -104,6 +108,6 @@ grails.project.dependency.resolution = {
       /** Recommended upgrades for 2.3.7 **/
       runtime ':hibernate:3.6.10.10'
       build ':tomcat:7.0.52.1'
-      runtime ':resources:1.2.7'
+      compile ':resources:1.2.7'
     }
 }
