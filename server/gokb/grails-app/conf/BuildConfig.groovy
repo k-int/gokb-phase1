@@ -57,6 +57,8 @@ grails.project.dependency.resolution = {
         runtime 'xalan:xalan:2.7.1'
         compile 'org.elasticsearch:elasticsearch-lang-groovy:1.4.0'
         compile 'org.ajoberstar:grgit:0.2.3'
+        runtime 'org.elasticsearch:elasticsearch-client-groovy:1.0.1'
+        // compile 'org.elasticsearch:elasticsearch-lang-groovy:1.4.0'
     }
 
     plugins {
