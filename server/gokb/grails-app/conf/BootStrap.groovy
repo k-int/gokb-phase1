@@ -10,6 +10,7 @@ import javax.servlet.http.HttpServletRequest
 import org.gokb.DomainClassExtender
 import org.gokb.IngestService
 import org.gokb.cred.*
+import org.gokb.refine.*
 import org.gokb.validation.Validation
 import org.gokb.validation.types.*
 
@@ -73,6 +74,9 @@ class BootStrap {
     
     // Add Custom APIs.
     addCustomApis()
+    
+    // Fail any projects that were ingesting at the time of startup.
+    failHungProjects()
   }
   
   private void addCustomApis() {
@@ -118,6 +122,13 @@ class BootStrap {
       p.save(flush:true);
     }
 
+  }
+  
+  def failHungProjects() {
+    RefineProject.findAllByProjectStatus(RefineProject.Status.INGESTING).each {
+      it.projectStatus = RefineProject.Status.INGEST_FAILED
+      it.save()
+    }
   }
 
   def addValidationRules() {
