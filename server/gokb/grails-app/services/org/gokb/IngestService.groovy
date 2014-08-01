@@ -100,63 +100,63 @@ class IngestService {
     result
   }
 
-  /**
-   * Do some validation on the content here.
-   */
-  def validateContent (project_data, col_positions, result) {
-
-    // Only check the content if the status is correct.
-    if (result.status) {
-
-      // Go through the data and see whether each row is valid.
-      def rowCount = 1
-
-      // Keep track of package ids in this doc.
-      Set packageIdentifiers = []
-      project_data.rowData.each { datarow ->
-
-        // Check the presence of the name first.
-        def pkg_name_pos = col_positions[PACKAGE_NAME]
-
-        if (pkg_name_pos != null) {
-
-          // Check the value of package name here.
-          def value = getRowValue(datarow,col_positions,PACKAGE_NAME)
-          if (!value || value == "") {
-            result.messages.add([text:"Row ${rowCount} contains no data for column ${PACKAGE_NAME}", type:"data_invalid", col: "${PACKAGE_NAME}"]);
-          } else {
-            // Add to the list of package ids.
-            packageIdentifiers << value.toString()
-          }
-        }
-        rowCount ++
-      }
-
-      // Check existing packages.
-      if (packageIdentifiers) {
-        def q = ComboCriteria.createFor(Package.createCriteria())
-        def existingPkgs = q.list {
-          and {
-            q.add ("ids.namespace.value", "eq", 'gokb-pkgid')
-            q.add ("ids.value", "in", [packageIdentifiers])
-          }
-        }
-
-        if (existingPkgs) {
-          // Get the package ids that cause the issue.
-          Set offendingIds = []
-          existingPkgs.each {pkg ->
-            pkg.ids.each {Identifier theId ->
-              if (packageIdentifiers.contains(theId.value)) offendingIds << theId.value
-            }
-          }
-
-          // Add a message.
-          result.messages.add([text:"Data present in column \"${PACKAGE_NAME}\" would result in an attemped package update.", type:"data_invalid", col: "${PACKAGE_NAME}", vals: (offendingIds)]);
-        }
-      }
-    }
-  }
+//  /**
+//   * Do some validation on the content here.
+//   */
+//  def validateContent (project_data, col_positions, result) {
+//
+//    // Only check the content if the status is correct.
+//    if (result.status) {
+//
+//      // Go through the data and see whether each row is valid.
+//      def rowCount = 1
+//
+//      // Keep track of package ids in this doc.
+//      Set packageIdentifiers = []
+//      project_data.rowData.each { datarow ->
+//
+//        // Check the presence of the name first.
+//        def pkg_name_pos = col_positions[PACKAGE_NAME]
+//
+//        if (pkg_name_pos != null) {
+//
+//          // Check the value of package name here.
+//          def value = getRowValue(datarow,col_positions,PACKAGE_NAME)
+//          if (!value || value == "") {
+//            result.messages.add([text:"Row ${rowCount} contains no data for column ${PACKAGE_NAME}", type:"data_invalid", col: "${PACKAGE_NAME}"]);
+//          } else {
+//            // Add to the list of package ids.
+//            packageIdentifiers << value.toString()
+//          }
+//        }
+//        rowCount ++
+//      }
+//
+//      // Check existing packages.
+//      if (packageIdentifiers) {
+//        def q = ComboCriteria.createFor(Package.createCriteria())
+//        def existingPkgs = q.list {
+//          and {
+//            q.add ("ids.namespace.value", "eq", 'gokb-pkgid')
+//            q.add ("ids.value", "in", [packageIdentifiers])
+//          }
+//        }
+//
+//        if (existingPkgs) {
+//          // Get the package ids that cause the issue.
+//          Set offendingIds = []
+//          existingPkgs.each {pkg ->
+//            pkg.ids.each {Identifier theId ->
+//              if (packageIdentifiers.contains(theId.value)) offendingIds << theId.value
+//            }
+//          }
+//
+//          // Add a message.
+//          result.messages.add([text:"Data present in column \"${PACKAGE_NAME}\" would result in an attemped package update.", type:"data_invalid", col: "${PACKAGE_NAME}", vals: (offendingIds)]);
+//        }
+//      }
+//    }
+//  }
 
   /**
    * Estimate the number of each component that would be Created/Updated as a result of ingesting this data.
@@ -436,11 +436,11 @@ class IngestService {
 
           // Lookup the title.
           TitleInstance title_info = titleLookupService.find(
-              jsonv(datarow.cells[col_positions[PUBLICATION_TITLE]]),
-              getRowValue(datarow,col_positions,PUBLISHER_NAME),
-              ids,
-              user
-              );
+            getRowValue(datarow,col_positions,PUBLICATION_TITLE),
+            getRowValue(datarow,col_positions,PUBLISHER_NAME),
+            ids,
+            user  
+          );
 
           // If we match a title then ingest...
           if (title_info != null) {
@@ -739,7 +739,7 @@ class IngestService {
       result.messages.add([text:"Problem processing project ingest. ${e}"])
       project_info.progress = 100;
       project_info.setProjectStatus (RefineProject.Status.INGEST_FAILED)
-      project_info.save(failOnError:true);
+      project_info.save(failOnError:true)
       // ToDo: Steve.. can you figure out a way to log the exception and pass it back to refine?
     }
     finally {
