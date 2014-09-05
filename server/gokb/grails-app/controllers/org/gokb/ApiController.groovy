@@ -30,6 +30,8 @@ class ApiController {
     // Go through defined properties.
     proj.properties.each { k,v ->
 
+      // println("Prop: ${k}");
+
       switch (v) {
         case User :
           User u = v as User
@@ -108,7 +110,7 @@ class ApiController {
     ]
 
     def json = data as JSON
-    log.debug (json)
+    // log.debug (json)
     render json
     //    render (text: "${params.callback}(${json})", contentType: "application/javascript", encoding: "UTF-8")
   }

@@ -8,7 +8,7 @@
   $(document).ready(function(){
     
     // Each table that has checkboxes in the first cell of a row.
-    $('table').each(function() {
+    $('table').not(".no-select-all").each(function() {
       
       // Get the table.
       var table = $(this);
@@ -67,15 +67,20 @@
         toggleLink("all");
         
         // Div to contain link and information on current selection.
-        var info = $('<div class="batch-all-info" />')
+        var info = $('.batch-all-info');
+        
+        if (info.length ==0) {
+          // Create the div and insert just before the table.
+          info = $('<div class="batch-all-info" />')
+            .insertBefore(table);
+        }
+        info
           .append(info_text)
           .append(" (")
           .append(link)
           .append(")")
           .hide()
         ;
-        
-        info.insertBefore(table);
         
         // Add an on-change listener to our checkobox.
         all_cb.change(function(){

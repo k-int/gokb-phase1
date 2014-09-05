@@ -84,4 +84,9 @@ class ReviewRequest {
     this.status=RefdataCategory.lookupOrCreate('ReviewRequest.Status', 'Closed')
     this.closedBy = rrcontext.user
   }
+
+  public String getNiceName() {
+        return "Review Request";
+  }
+
 }

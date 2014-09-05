@@ -436,10 +436,10 @@ class IngestService {
 
           // Lookup the title.
           TitleInstance title_info = titleLookupService.find(
-            getRowValue(datarow,col_positions,PUBLICATION_TITLE),
+            jsonv(datarow.cells[col_positions[PUBLICATION_TITLE]]),
             getRowValue(datarow,col_positions,PUBLISHER_NAME),
             ids,
-            user  
+            user
           );
 
           // If we match a title then ingest...
