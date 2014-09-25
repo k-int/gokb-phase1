@@ -68,6 +68,8 @@ grails.project.dependency.resolution = {
         runtime 'net.sf.opencsv:opencsv:2.0'
         
         compile 'com.github.sommeri:less4j:1.8.2'
+        
+        compile 'org.ajoberstar:grgit:0.2.3' // 0.3.0 is Groovy >=2.3 and breaks.  
     }
 
     plugins {
@@ -118,13 +120,6 @@ grails.project.dependency.resolution = {
       // Joda time to handle the ISO dates.
       compile ":joda-time:1.4"
       
-      //build ':tomcat:7.0.40.1'
-
-      runtime ":database-migration:1.3.3"
-	
-    	// Joda time to handle the ISO dates.
-    	compile ":joda-time:1.4"
-
       compile ":spring-security-core:1.2.7.3"
       compile ":spring-security-ui:0.2"
       compile ":spring-security-acl:1.1.1"
@@ -139,14 +134,7 @@ grails.project.dependency.resolution = {
       compile ":quartz:1.0.1"
 
       // II: Added.. Groping around in the dark a bit..
-      // compile ":compass-sass:0.7" - OK this causes an exception
-      
-      runtime ':gsp-resources:0.4.4', {
-        excludes 'resources'
-      }
-      compile ":font-awesome-resources:3.2.1", {
-        excludes 'resources'
-      }
+      // compile ":compass-sass:0.7" - OK this causes an exceptionr
             
       /** Moved plugins from the properties file to here **/
       compile ':audit-logging:0.5.4' // SO: Tried upgrading to 0.5.5.3, but this caused a null pointer to be thrown.
