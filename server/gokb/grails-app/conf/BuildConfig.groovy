@@ -46,7 +46,7 @@ grails.project.dependency.resolution = {
         
         // Custom repo that points to the public nexus repo. Used for elastic search client as there are no "official" ones.
         mavenRepo "http://repo.spring.io/milestone/"
-        mavenRepo "http://projects.k-int.com/nexus-webapp-1.4.0/content/repositories/releases"
+        mavenRepo "http://nexus.k-int.com/content/repositories/releases"
 
         // uncomment these (or add new ones) to enable remote dependency resolution from public Maven repositories
         //mavenRepo "http://snapshots.repository.codehaus.org"
@@ -63,16 +63,18 @@ grails.project.dependency.resolution = {
         runtime 'org.apache.commons:commons-compress:1.4.1'
         runtime 'org.apache.tika:tika-core:1.4'
         runtime 'xalan:xalan:2.7.1'
-        runtime 'org.elasticsearch:elasticsearch:1.0.1'
-        runtime 'org.elasticsearch:elasticsearch-client-groovy:1.0.1'
-        // compile 'org.elasticsearch:elasticsearch-lang-groovy:1.4.0'
+        runtime 'org.elasticsearch:elasticsearch:1.3.2'
+        runtime 'org.elasticsearch:elasticsearch-client-groovy:1.3.2'
+        runtime 'net.sf.opencsv:opencsv:2.0'
+        
+        compile 'com.github.sommeri:less4j:1.8.2'
     }
 
     plugins {
       
       
       /* Grails 2.4 Upgrade */
-      build ':tomcat:7.0.52.1' // plugins for the compile step compile
+      build ':tomcat:7.0.54' // plugins for the compile step compile
       
       // plugins for the compile step
 //      compile ':scaffolding:2.1.0'
@@ -82,33 +84,40 @@ grails.project.dependency.resolution = {
 //      compile ":spring-security-acl:2.0-RC1"
 //      compile ":spring-security-ui:1.0-RC2"
       
-//      compile ':asset-pipeline:1.8.3'
-      runtime ':hibernate:3.6.10.14'
+      compile ':asset-pipeline:1.9.9'
+      
+      // Allows the use of groovy code in css and js files by suffixing with '-gtpl'.
+      // Injects grailsApplication and config for easy access in your files.
+//      compile ":groovy-template-grails-asset-pipeline:0.4"
+//      compile ":groovy-asset-pipeline:1.2"
+      
+      // LESS compiler
+      compile ":less-asset-pipeline:1.11.0", {
+        excludes 'less4j'
+      }
+      
+      runtime ':hibernate:3.6.10.2'
+      // runtime ':hibernate:3.6.10.14' - this pukes forme
       runtime ':database-migration:1.4.0'
-      runtime ":resources:1.2.8"
       
       /*************************************/
       
 //      runtime ':hibernate:3.6.10.2'
-      runtime ":jquery:1.8.3"
-      runtime ':jquery-ui:1.8.24'
-//      runtime ":resources:1.2"
-      runtime ':gsp-resources:0.4.4'
+      runtime ":jquery:1.11.1"
+      runtime ':jquery-ui:1.10.3'
 
       // Uncomment these (or add new ones) to enable additional resources capabilities
       //runtime ":zipped-resources:1.0"
       //runtime ":cached-resources:1.0"
       //runtime ":yui-minify-resources:0.1.4"
-
 //      build ':tomcat:7.0.40.1'
-      
 
 //      runtime ":database-migration:1.3.3"
-
+      
 //      compile ':cache:1.0.1'
-	
-    	// Joda time to handle the ISO dates.
-    	compile ":joda-time:1.4"
+  
+      // Joda time to handle the ISO dates.
+      compile ":joda-time:1.4"
 
       compile ":spring-security-core:1.2.7.3"
       compile ":spring-security-ui:0.2"
@@ -119,18 +128,20 @@ grails.project.dependency.resolution = {
       }
       
       // Font awesome for font based icons.
-      compile ":font-awesome-resources:4.1.0.1"
+      compile ":font-awesome-resources:4.2.0.0"
       
       // Job scheduler plugin.
       compile ":quartz:1.0.1"
+
+      // II: Added.. Groping around in the dark a bit..
+      // compile ":compass-sass:0.7" - OK this causes an exception
       
       /** Moved plugins from the properties file to here **/
       compile ':audit-logging:0.5.4' // SO: Tried upgrading to 0.5.5.3, but this caused a null pointer to be thrown.
       compile ':executor:0.3'
       compile ':famfamfam:1.0.1'
       compile ':rest:0.7'
-      compile ":twitter-bootstrap:3.2.1"
-      
-//      compile ':lesscss-resources:1.3.3'
+      // compile ':twitter-bootstrap:2.3.2'
+      compile ":twitter-bootstrap:3.2.0.2"
     }
 }

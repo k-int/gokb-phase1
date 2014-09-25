@@ -1,6 +1,3 @@
-<r:require modules="gokbstyle"/>
-<r:require modules="editable"/>
-
 <g:form method="get" class="form-horizontal" controller="search" role="form">
 
   <input type="hidden" name="qbe" value="${params.qbe}"/>
@@ -10,7 +7,7 @@
   </g:each>
 
   <g:each in="${formdefn}" var="fld">
-    <g:if test="${hide?.contains(fld.qparam)}" >
+    <g:if test="${((hide?.contains(fld.qparam)) || ( fld.hide==true))}">
       <input type="hidden" name="${fld.qparam}" id="${fld.qparam}" value="${params[fld.qparam]}" />
     </g:if>
     <g:else>
@@ -39,9 +36,19 @@
   </g:each>
 
   <div class="form-group">
-    <div class="col-sm-offset-2 col-sm-10">
-      <button type="submit" class="btn btn-default btn-sm">Search</button>
+    <label class="col-sm-2 control-label"></label>
+    <div class="col-sm-10">
+      <g:each in="${cfg.qbeGlobals}" var="glob">
+        <g:if test="${glob.qparam != null}">
+          ${glob.prompt} : <select name="${glob.qparam}" value="${params[glob.qparam]}">
+            <option value="on" ${(params[glob.qparam] ?: glob.default ) == 'on' ? 'selected' : ''}>On</option>
+            <option value="off" ${(params[glob.qparam] ?: glob.default ) == 'off' ? 'selected' : ''}>Off</option>
+          </select>
+        </g:if>
+      </g:each>
+      <button type="submit" class="btn btn-success btn-sm pull-right">Search</button>
     </div>
   </div>
+
 
 </g:form>

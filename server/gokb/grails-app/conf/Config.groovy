@@ -61,6 +61,8 @@ grails.views.gsp.sitemesh.preprocess = true
 // scaffolding templates configuration
 grails.scaffolding.templates.domainSuffix = 'Instance'
 
+grails.plugins.twitterbootstrap.fixtaglib = true
+
 // Set to false to use the new Grails 1.2 JSONBuilder in the render method
 grails.json.legacy.builder = false
 // enabled native2ascii conversion of i18n properties files
@@ -117,7 +119,10 @@ log4j = {
       'grails.app.filters',
       'grails.app.conf',
       'grails.app.jobs',
-      'com.k_int'
+      'com.k_int',
+      'com.k_int.apis',
+      'com.k_int.asset.pipeline.groovy',
+      'asset.pipeline.less.compilers'
 
   //   debug  'org.gokb.DomainClassExtender'
 
@@ -164,8 +169,8 @@ validation.regex.kbartcoveragedepth = "^(\\Qfulltext\\E|\\Qselected articles\\E|
 
 validation.rules = [
   "${IngestService.PUBLICATION_TITLE}" : [
-    [ type: ColumnMissing			, severity: A_ValidationRule.SEVERITY_ERROR ],
-    [ type: CellNotEmpty			, severity: A_ValidationRule.SEVERITY_ERROR ]
+    [ type: ColumnMissing     , severity: A_ValidationRule.SEVERITY_ERROR ],
+    [ type: CellNotEmpty      , severity: A_ValidationRule.SEVERITY_ERROR ]
   ],
 
   // All platforms
@@ -181,8 +186,8 @@ validation.rules = [
   ],
 
   "${IngestService.HOST_PLATFORM_URL}" : [
-    [ type: ColumnMissing	, severity: A_ValidationRule.SEVERITY_ERROR ],
-    [ type: CellNotEmpty	, severity: A_ValidationRule.SEVERITY_ERROR ],
+    [ type: ColumnMissing , severity: A_ValidationRule.SEVERITY_ERROR ],
+    [ type: CellNotEmpty  , severity: A_ValidationRule.SEVERITY_ERROR ],
     [
       type: CellMatches,
       severity: A_ValidationRule.SEVERITY_ERROR,
@@ -195,8 +200,8 @@ validation.rules = [
   ],
 
   "${IngestService.HOST_PLATFORM_NAME}" : [
-    [ type: ColumnMissing	, severity: A_ValidationRule.SEVERITY_ERROR ],
-    [ type: CellNotEmpty	, severity: A_ValidationRule.SEVERITY_ERROR ],
+    [ type: ColumnMissing , severity: A_ValidationRule.SEVERITY_ERROR ],
+    [ type: CellNotEmpty  , severity: A_ValidationRule.SEVERITY_ERROR ],
     [
       type: LookedUpValue,
       severity: A_ValidationRule.SEVERITY_ERROR,
@@ -205,27 +210,27 @@ validation.rules = [
   ],
 
   "${IngestService.DATE_FIRST_PACKAGE_ISSUE}" : [
-    [ type: ColumnMissing	, severity: A_ValidationRule.SEVERITY_WARNING ],
-    [ type: CellNotEmpty	, severity: A_ValidationRule.SEVERITY_WARNING ],
-    [ type: EnsureDate		, severity: A_ValidationRule.SEVERITY_ERROR ]
+    [ type: ColumnMissing , severity: A_ValidationRule.SEVERITY_WARNING ],
+    [ type: CellNotEmpty  , severity: A_ValidationRule.SEVERITY_WARNING ],
+    [ type: EnsureDate    , severity: A_ValidationRule.SEVERITY_ERROR ]
   ],
 
   "${IngestService.DATE_LAST_PACKAGE_ISSUE}" : [
     [ type: ColumnMissing , severity: A_ValidationRule.SEVERITY_WARNING ],
-    [ type: EnsureDate		, severity: A_ValidationRule.SEVERITY_ERROR ]
+    [ type: EnsureDate    , severity: A_ValidationRule.SEVERITY_ERROR ]
   ],
 
   "${IngestService.PACKAGE_NAME}" : [
-    [ type: ColumnMissing	, severity: A_ValidationRule.SEVERITY_ERROR ],
-    [ type: CellNotEmpty	, severity: A_ValidationRule.SEVERITY_ERROR ],
-    //		[
-    //			type: IsSimilar,
-    //			severity: A_ValidationRule.SEVERITY_WARNING,
-    //			args: [
-    //				org.gokb.cred.Package,
-    //				9
-    //			]
-    //		]
+    [ type: ColumnMissing , severity: A_ValidationRule.SEVERITY_ERROR ],
+    [ type: CellNotEmpty  , severity: A_ValidationRule.SEVERITY_ERROR ],
+    //    [
+    //      type: IsSimilar,
+    //      severity: A_ValidationRule.SEVERITY_WARNING,
+    //      args: [
+    //        org.gokb.cred.Package,
+    //        9
+    //      ]
+    //    ]
     [
       type: LookedUpValue,
       severity: A_ValidationRule.SEVERITY_ERROR,
@@ -234,8 +239,8 @@ validation.rules = [
   ],
 
   "${IngestService.PUBLISHER_NAME}" : [
-    [ type: ColumnMissing	, severity: A_ValidationRule.SEVERITY_ERROR ],
-    [ type: CellNotEmpty	, severity: A_ValidationRule.SEVERITY_WARNING ],
+    [ type: ColumnMissing , severity: A_ValidationRule.SEVERITY_ERROR ],
+    [ type: CellNotEmpty  , severity: A_ValidationRule.SEVERITY_WARNING ],
     [
       type: LookedUpValue,
       severity: A_ValidationRule.SEVERITY_ERROR,
@@ -357,7 +362,7 @@ validation.rules = [
 
   // ISSN
   "${IngestService.IDENTIFIER_PREFIX}issn" : [
-    [ type: ColumnMissing	, severity: A_ValidationRule.SEVERITY_ERROR ],
+    [ type: ColumnMissing , severity: A_ValidationRule.SEVERITY_ERROR ],
     [
       type: CellMatches,
       severity: A_ValidationRule.SEVERITY_ERROR,
@@ -375,7 +380,7 @@ validation.rules = [
   ],
 
   "${IngestService.IDENTIFIER_PREFIX}eissn" : [
-    [ type: ColumnMissing	, severity: A_ValidationRule.SEVERITY_ERROR ],
+    [ type: ColumnMissing , severity: A_ValidationRule.SEVERITY_ERROR ],
     [
       type: CellMatches,
       severity: A_ValidationRule.SEVERITY_ERROR,
@@ -457,6 +462,10 @@ globalSearchTemplates = [
           contextTree:['ctxtp':'qry', 'comparator' : 'eq', 'prop':'ids.value']
         ],
       ],
+      qbeGlobals:[
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted', 
+         'qparam':'qp_showDeleted', 'default':'on']
+      ],
       qbeResults:[
         [heading:'Type', property:'class.simpleName'],
         [heading:'Name/Title', property:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
@@ -464,10 +473,12 @@ globalSearchTemplates = [
       ]
     ]
   ],
-  'packages':[
+  '1packages':[
     baseclass:'org.gokb.cred.Package',
     title:'Packages',
     group:'Secondary',
+    defaultSort:'name',
+    defaultOrder:'asc',
     qbeConfig:[
       qbeForm:[
         [
@@ -478,7 +489,8 @@ globalSearchTemplates = [
         ]
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true]
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted', 
+         'qparam':'qp_showDeleted', 'default':'on']
       ],
       qbeResults:[
         [heading:'Name', property:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
@@ -490,7 +502,7 @@ globalSearchTemplates = [
       ]
     ]
   ],
-  'orgs':[
+  '2orgs':[
     baseclass:'org.gokb.cred.Org',
     title:'Organizations',
     group:'Secondary',
@@ -500,8 +512,12 @@ globalSearchTemplates = [
           prompt:'Name or Title',
           qparam:'qp_name',
           placeholder:'Name or title of item',
-          contextTree:['ctxtp':'qry', 'comparator' : 'ilike', 'prop':'name']
+          contextTree:['ctxtp':'qry', 'comparator' : 'ilike', 'prop':'name', 'wildcard':'R']
         ],
+      ],
+      qbeGlobals:[
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted', 
+         'qparam':'qp_showDeleted', 'default':'on']
       ],
       qbeResults:[
         [heading:'Name', property:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
@@ -509,7 +525,7 @@ globalSearchTemplates = [
       ]
     ]
   ],
-  'platforms':[
+  '1platforms':[
     baseclass:'org.gokb.cred.Platform',
     title:'Platforms',
     group:'Secondary',
@@ -522,16 +538,22 @@ globalSearchTemplates = [
           contextTree:['ctxtp':'qry', 'comparator' : 'ilike', 'prop':'name']
         ],
       ],
+      qbeGlobals:[
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted', 
+         'qparam':'qp_showDeleted', 'default':'on']
+      ],
       qbeResults:[
         [heading:'Name/Title', property:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
         [heading:'Status', property:'status.value'],
       ]
     ]
   ],
-  'titles':[
+  '1titles':[
     baseclass:'org.gokb.cred.TitleInstance',
     title:'Titles',
     group:'Secondary',
+    defaultSort:'name',
+    defaultOrder:'asc',
     qbeConfig:[
       qbeForm:[
         [
@@ -544,11 +566,13 @@ globalSearchTemplates = [
           prompt:'Content Provider',
           qparam:'qp_prov_id',
           placeholder:'Content Provider Id',
-          contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'publisher.id','type' : 'java.lang.Long']
+          contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'publisher.id','type' : 'java.lang.Long'],
+          hide:true
         ],
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true]
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted', 
+         'qparam':'qp_showDeleted', 'default':'on']
       ],
       qbeResults:[
         [heading:'Name/Title', property:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'],sort:'name' ],
@@ -595,7 +619,7 @@ globalSearchTemplates = [
       ]
     ]
   ],
-  'tipps':[
+  '3tipps':[
     baseclass:'org.gokb.cred.TitleInstancePackagePlatform',
     title:'TIPPs',
     group:'Secondary',
@@ -645,7 +669,8 @@ globalSearchTemplates = [
         ],
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true]
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted', 
+         'qparam':'qp_showDeleted', 'default':'on']
       ],
       qbeResults:[
         [heading:'TIPP Persistent Id', property:'persistentId', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
@@ -735,6 +760,8 @@ globalSearchTemplates = [
         ],
       ],
       qbeGlobals:[
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted', 
+         'qparam':'qp_showDeleted', 'default':'on']
       ],
       qbeResults:[
         [heading:'Name/Title', property:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
@@ -778,6 +805,8 @@ globalSearchTemplates = [
         ],
       ],
       qbeGlobals:[
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted', 
+         'qparam':'qp_showDeleted', 'default':'on']
       ],
       qbeResults:[
         [heading:'Name/Title', property:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
@@ -820,6 +849,8 @@ globalSearchTemplates = [
         ],
       ],
       qbeGlobals:[
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted', 
+         'qparam':'qp_showDeleted', 'default':'on']
       ],
       qbeResults:[
         [heading:'Name/Title', property:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
@@ -890,6 +921,7 @@ globalSearchTemplates = [
       qbeResults:[
         [heading:'Name', property:'dcName', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
         [heading:'Display Name', property:'displayName'],
+        [heading:'Sort Key', property:'dcSortOrder'],
         [heading:'Type', property:'type?.value'],
       ]
     ]
@@ -1010,6 +1042,19 @@ apiClasses = [
   "com.k_int.apis.GrailsDomainHelpersApi"
 ]
 
+/** Less config **/
+grails.assets.less.compiler = 'less4j'
+grails.assets.excludes = ["gokb/themes/**/*.less", "icons"]
+grails.assets.includes = ["gokb/themes/**/theme.less", "jquery/*.js"]
+
+
+grails.assets.plugin."twitter-bootstrap".excludes = ["**/*.less"]
+
+grails.assets.plugin."font-awesome-resources".excludes = ["**/*.less"]
+grails.assets.plugin."jquery".excludes = ["**", "*.*"]
+grails.assets.minifyJs = false
+
+gokb.theme = "yeti"
 
 // cors.headers = ['Access-Control-Allow-Origin': '*']
 // 'Access-Control-Allow-Origin': 'http://xissn.worldcat.org'

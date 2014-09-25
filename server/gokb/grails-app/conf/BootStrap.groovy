@@ -5,6 +5,8 @@ import org.codehaus.groovy.grails.commons.GrailsApplication
 
 import java.lang.reflect.Method
 
+import org.gokb.GOKbTextUtils
+
 import javax.servlet.http.HttpServletRequest
 
 import org.gokb.DomainClassExtender
@@ -77,6 +79,7 @@ class BootStrap {
     }
 
     String fs = grailsApplication.config.project_dir
+    log.debug("Theme:: ${grailsApplication.config.gokb.theme}");
 
     log.debug("Make sure project files directory exists, config says it's at ${fs}");
     File f = new File(fs)
@@ -92,9 +95,19 @@ class BootStrap {
     addValidationRules()
     
     failAnyIngestingProjects()
+
+    // Add our custom metaclass methods for all KBComponents.
+    alterDefaultMetaclass();
+
+    KBComponent.executeQuery("select kbc from KBComponent as kbc where kbc.normname is null and kbc.name is not null").each { kbc ->
+      log.debug("Repair component with no normalised name.. ${kbc}");
+      kbc.normname = GOKbTextUtils.normaliseString(kbc.name)
+      kbc.save();
+
+    }
   }
   
-  private void failAnyIngestingProjects() {
+  def failAnyIngestingProjects() {
     log.debug("Failing any projects stuck on Ingesting on server start.");
     RefineProject.findAllByProjectStatus (RefineProject.Status.INGESTING)?.each {
       
@@ -102,6 +115,7 @@ class BootStrap {
       it.save(flush:true)
     }
   }
+
   
   private void addCustomApis() {
     
@@ -112,6 +126,7 @@ class BootStrap {
       // to add to the class or not. This defaults to "true". Have overriden on the GrailsDomainHelperApi utils
       // and moved the selective code there. This means that *ALL* domain classes will still receive the methods in the
       // SecurityApi.
+      // II: has this caused projects under org.gokb.refine to no longer be visible? Not sure how to fix it.
       
       log.debug("Considering ${c}")
       grailsApplication.config.apiClasses.each { String className -> 
@@ -121,12 +136,12 @@ class BootStrap {
       }
     }
   }
-
+  
   def registerDomainClasses() {
 
     def std_domain_type = RefdataCategory.lookupOrCreate('DCType', 'Standard').save()
     grailsApplication.domainClasses.each { dc ->
-      log.debug("Ensure ${dc.name} has entry in KBDomainInfo table");
+      // log.debug("Ensure ${dc.name} has entry in KBDomainInfo table");
       def dcinfo = KBDomainInfo.findByDcName(dc.clazz.name)
       if ( dcinfo == null ) {
         dcinfo = new KBDomainInfo(dcName:dc.clazz.name, displayName:dc.name, type:std_domain_type);

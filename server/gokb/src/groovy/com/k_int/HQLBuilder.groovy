@@ -60,7 +60,20 @@ public class HQLBuilder {
     qbetemplate.qbeConfig.qbeGlobals.each { global_prop_def ->
       // log.debug("Adding query global: ${global_prop_def}");
       // creat a contextTree so we can process the filter just like something added to the query tree
-      criteria.add([defn:[qparam:global_prop_def.prop.replaceAll('.','_'),contextTree:global_prop_def],value:global_prop_def.value])
+      // Is this global user selectable
+      if ( global_prop_def.qparam != null ) {  // Yes
+        if ( params[global_prop_def.qparam] == null ) { // If it's not be set
+          if ( global_prop_def.default == 'on' ) { // And the default is set
+            criteria.add([defn:[qparam:global_prop_def.prop.replaceAll('.','_'),contextTree:global_prop_def],value:global_prop_def.value])
+          }
+        }
+        else if ( params[global_prop_def.qparam] == 'on' ) { // It's set explicitly, if its on, add the criteria
+          criteria.add([defn:[qparam:global_prop_def.prop.replaceAll('.','_'),contextTree:global_prop_def],value:global_prop_def.value])
+        }
+      }
+      else {
+        criteria.add([defn:[qparam:global_prop_def.prop.replaceAll('.','_'),contextTree:global_prop_def],value:global_prop_def.value])
+      }
     }
 
     def hql_builder_context = [:]
@@ -68,8 +81,8 @@ public class HQLBuilder {
     hql_builder_context.query_clauses = []
     hql_builder_context.bindvars = [:]
     hql_builder_context.genericOIDService = genericOIDService;
-    hql_builder_context.sort = params.sort
-    hql_builder_context.order = params.order
+    hql_builder_context.sort = params.sort ?: qbetemplate.defaultSort
+    hql_builder_context.order = params.order ?: qbetemplate.defaultOrder
 
     def baseclass = target_class.getClazz()
     criteria.each { crit ->
@@ -95,12 +108,12 @@ public class HQLBuilder {
     def fetch_hql = "select o ${hql}"
 
     log.debug("Attempt count qry ${count_hql}");
-    log.debug("Attempt qry ${fetch_hql}");
+    // log.debug("Attempt qry ${fetch_hql}");
 
     result.reccount = baseclass.executeQuery(count_hql, hql_builder_context.bindvars)[0]
     result.recset = baseclass.executeQuery(fetch_hql, hql_builder_context.bindvars,[max: result.max, offset: result.offset])
 
-    log.debug("Result of count query: ${result.reccount}");
+    // log.debug("Result of count query: ${result.reccount}");
   }
 
   static def processProperty(hql_builder_context,crit,baseclass) {

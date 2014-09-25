@@ -105,7 +105,7 @@ abstract class A_Api <T> {
 
     // Should we bind this api to this class?
     if (api.applicableFor(targetClass) ) {
-      log.debug("Adding ${api.class.name} methods to ${targetClass.name}");
+      // log.debug("Adding ${api.class.name} methods to ${targetClass.name}");
 
       apiClass.getDeclaredMethods().each { Method m ->
         // println("processing declared method ${m}");
@@ -149,21 +149,15 @@ abstract class A_Api <T> {
                     the_args.addAll(args);
                   else
                     the_args.add(args);
-                }
-  
-                // First check to see if there is an original method defined.
-                // if there is then we should use that instead.
-                if (delegate.respondsTo("${m.name}", the_args.toArray())) {
-                  // The element
-                }
-  
+                }  
   
                 // Prepend the new value.
                 the_args.add(0, delegate)
                 api.invokeMethod("${m.name}", the_args.toArray())
               }
+              log.debug("\tAdded ${m.name} for arg types ${pTypes}.") 
             } else {
-              log.debug("Skipping ${m.name} on ${targetClass.name}, allready declared.") 
+              log.debug("\tSkipping ${m.name} for arg types ${pTypes}.") 
             }
           } else {
             // println("Adding static method.. ${m.name} to ${targetClass.name}");
@@ -209,12 +203,11 @@ abstract class A_Api <T> {
                 // And not this:: the_args.add(0, delegate.class) (which is java.lang.Class in the case where a static is called)
                 def result = apiClass.invokeMethod("${m.name}", the_args.toArray())
   
-                // println("Call completed returning");
-  
                 result
               }
+              log.debug("\tAdded static ${m.name} for arg types ${pTypes}") 
             } else {
-              log.debug("Skipping static ${m.name} on ${targetClass.name}, allready declared.") 
+              log.debug("\tSkipping static ${m.name} for arg types ${pTypes}") 
             }
           }
         }

@@ -47,20 +47,21 @@ class UserDetailsFilters {
             
             def domains = KBDomainInfo.createCriteria().list {
               
-              ilike ('dcName', 'org.gokb.cred%')
+              ilike ('dcName', 'org.gokb%')
               
               createAlias ("type", "menueType")
               
-              order ('menueType.sortKey')
-              order ('menueType.id')
-              order ('displayName')
+              order ('menueType.sortKey','asc')
+              order ('dcSortOrder','asc')
+              order ('displayName','asc')
             }
             
             domains.each { d ->
-              //log.debug("Process ${d.displayName} - ${d.type.id}");
+              // log.debug("Process ${d.displayName} (${d.dcSortOrder}) - ${d.type.id}");
               if ( d.type.id != current_type ) {
                 current_type = d.type.id
-                current_list = [:]
+                // current_list = [:]
+                current_list = []
                 session.userPereferences.mainMenuSections.put(d.type.value, current_list)
                 //log.debug("Added new menu section for ${d.type.value}");
               }
@@ -69,18 +70,18 @@ class UserDetailsFilters {
               Class tc = Class.forName(d.dcName)
               
               // boolean hasPermission(Authentication authentication, domainObject, Permission… permissions)
-              if ( tc.isReadable() ) {
+              if ( tc.isTypeReadable() ) { // || request.request.isUserInRole('ROLE_ADM')) {
  
                 // Find any searches for that domain that the user has access to and add them to the menu section
                 def searches_for_this_domain = grailsApplication.config.globalSearchTemplates.findAll{it.value.baseclass==d.dcName}
                 searches_for_this_domain.each {
                   //log.debug("Adding search for ${it.key} - ${it.value.baseclass}");
-                  current_list[it.key] = it.value
+                  current_list.add(it) // [it.key] = it.value
                 }
               }
 
               // Add if creatable.
-              if ( tc.isCreatable() ) {
+              if ( tc.isTypeCreatable() ) { // || request.request.isUserInRole('ROLE_ADM') ) {
                 session.userPereferences.createMenu.add(d);
               }
             }

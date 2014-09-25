@@ -5,17 +5,38 @@ import org.gokb.cred.*
 import grails.plugins.springsecurity.Secured
 import org.gokb.cred.*
 import org.gokb.GOKbTextUtils
+import au.com.bytecode.opencsv.CSVReader
 
 class IntegrationController {
 
   def grailsApplication
   def springSecurityService
   def titleLookupService
+  def sessionFactory
+  def propertyInstanceMap = org.codehaus.groovy.grails.plugins.DomainClassGrailsPlugin.PROPERTY_INSTANCE_MAP
 
   @Secured(['ROLE_API', 'IS_AUTHENTICATED_FULLY'])
   def index() {
   }
   
+  @Secured(['ROLE_API', 'IS_AUTHENTICATED_FULLY'])
+  def assertJsonldPlatform() { 
+    def result = [result:'OK']
+    def name = request.JSON.'skos:prefLabel'
+    def normname = GOKbTextUtils.normaliseString(name)
+    def located_entries = KBComponent.findAllByNormname(normname)
+    log.debug("assertJsonldPlatform ${name}/${normname}");
+    if ( located_entries.size() == 0 ) {
+      log.debug("No platform with normname ${normname} - create");
+      def new_platform = new org.gokb.cred.Platform(name:name, normname:normname).save()
+      result.message="Added new platform"
+    }
+    else {
+      result.message="Entity with that name already exists.."
+    }
+    render result as JSON
+  }
+
   @Secured(['ROLE_API', 'IS_AUTHENTICATED_FULLY'])
   def assertJsonldOrg() { 
     // log.debug("assertOrg, request.json = ${request.JSON}");
@@ -32,8 +53,10 @@ class IntegrationController {
   
         // Try and match on primary ID
         def located_entries = KBComponent.lookupByIdentifierValue([request.JSON.'@id'.toString()] as String[]);
+
         if ( located_entries?.size() == 1 ) {
           log.debug("Identified record..");
+          enrichJsonLDOrg(located_entries[0], request.JSON)
         }
         else if ( located_entries?.size() == 0 ) {
   
@@ -57,7 +80,7 @@ class IntegrationController {
             }
             else if ( located_entries?.size() == 1 ) {
                log.debug("Exact match on normalised name ${normname} - good enough");
-               enrichJsonLDOrf(located_entries[0], request.JSON)
+               enrichJsonLDOrg(located_entries[0], request.JSON)
             }
             else {
               log.error("Multiple matches on normalised name... abandon all hope");
@@ -127,6 +150,8 @@ class IntegrationController {
       new_org.ensureVariantName(al);
     }
 
+    new_org.save();
+
     if ( request.JSON.'foaf:homepage' != null ) {
       new_org.homepage = request.JSON.'foaf:homepage'
     }
@@ -139,7 +164,13 @@ class IntegrationController {
     }
   }
 
-  def enrichJsonLDOrf(org, jsonld) {
+  def enrichJsonLDOrg(org, jsonld) {
+    log.debug("Enrich existing..");
+    request.JSON.'skos:altLabel'?.each { al ->
+      println("checking alt label ${al}");
+      org.ensureVariantName(al);
+    }
+
   }
 
   /**
@@ -388,4 +419,88 @@ class IntegrationController {
 
     render result as JSON
   }
+
+
+  @Secured(['ROLE_API', 'IS_AUTHENTICATED_FULLY'])
+  def loadTitleList() {
+    def title_file = request.getFile("titleFile")?.inputStream
+    char tab = '\t'
+    char quote = '"'
+    def r = new CSVReader( new InputStreamReader(title_file, java.nio.charset.Charset.forName('UTF-8') ), tab,quote )
+
+    def col_positions = [ 'identifier.pissn':-1, 'identifier.eissn':-1, 'title':-1 ]
+
+    String [] header = r.readNext()
+    int ctr = 0
+    header.each { 
+      col_positions [ it.toLowerCase() ] = ctr++
+    }
+
+    if ( ( col_positions.'title' != -1 ) && 
+         ( ( col_positions.'identifier.pissn' != -1 ) || 
+           ( col_positions.'identifier.eissn' != -1 ) ) ) {
+
+      // So long as we have at least one identifier...
+      String [] nl = r.readNext()
+
+      int rowctr = 0;
+
+      while ( nl != null ) {
+        try {
+          KBComponent.withNewTransaction() {
+
+            def candidate_identifiers = []
+
+            if ( ( col_positions.'identifier.pissn' != -1 ) && 
+                 ( nl[col_positions.'identifier.pissn']?.length() > 0 ) && 
+                 ( nl[col_positions.'identifier.pissn'].toLowerCase() != 'null' ) ) { 
+              candidate_identifiers.add([type:'issn', value:nl[col_positions.'identifier.pissn']]);
+            }
+
+            if ( ( col_positions.'identifier.eissn' != -1 ) && 
+                 ( nl[col_positions.'identifier.eissn']?.length() > 0 ) && 
+                 ( nl[col_positions.'identifier.eissn'].toLowerCase() != 'null' ) ) { 
+              candidate_identifiers.add([type:'eissn', value:nl[col_positions.'identifier.eissn']]);
+            }
+
+            if ( candidate_identifiers.size() > 0 ) {
+              log.debug("Looking up ${candidate_identifiers} - ${nl[col_positions.'title']}");
+              def existing_component = titleLookupService.find (nl[col_positions.'title'], null, candidate_identifiers)
+            }
+            else {
+              log.debug("No candidate identifiers: ${nl}");
+            }
+          }
+        }
+        catch ( Exception e ) {
+          log.error("Unable to process..",e);
+        }
+
+        if ( rowctr++ > 100 ) {
+          log.debug("CleanUpGorm..");
+          rowctr = 0;
+          cleanUpGorm()
+        }
+        nl = r.readNext()
+        log.debug("Next row: ${nl}");
+      }
+    }
+    log.debug("Done");
+    redirect(action:'index');
+  }
+
+  def cleanUpGorm() {
+    log.debug("Clean up GORM");
+
+    // Get the current session.
+    def session = sessionFactory.currentSession
+
+    // flush and clear the session.
+    session.flush()
+    session.clear()
+
+    // Clear the property instance map.
+    propertyInstanceMap.get().clear()
+  }
+
 }

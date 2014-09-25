@@ -20,15 +20,21 @@ public class GrailsDomainHelpersApi<T> extends A_Api<T> {
     deproxy(null, component).getClass().getName();
   }
   
-  /*
-  Commenting out for now.. Seems to be causing problems
+  
+  /* Commenting out for now.. Seems to be causing problems
   public boolean isInstanceOf (T component, Class testCase) {
-    component.getMetaClass().getTheClass().isAssignableFrom(testCase)
+    if (component) return testCase?.isAssignableFrom(component.getClass())
+    
+    return false
   }
   */
   
   public static <E> E deproxy(Class<T> clazz, def element) {
     ClassUtils.deproxy(element)
+  }
+  
+  public static <E> E deproxy(def component) {
+    ClassUtils.deproxy(component)
   }
   
   protected boolean applicableFor (Class c) {
