@@ -72,7 +72,6 @@ grails.project.dependency.resolution = {
 
     plugins {
       
-      
       /* Grails 2.4 Upgrade */
       build ':tomcat:7.0.54' // plugins for the compile step compile
       
@@ -118,6 +117,13 @@ grails.project.dependency.resolution = {
   
       // Joda time to handle the ISO dates.
       compile ":joda-time:1.4"
+      
+      //build ':tomcat:7.0.40.1'
+
+      runtime ":database-migration:1.3.3"
+	
+    	// Joda time to handle the ISO dates.
+    	compile ":joda-time:1.4"
 
       compile ":spring-security-core:1.2.7.3"
       compile ":spring-security-ui:0.2"
@@ -129,13 +135,19 @@ grails.project.dependency.resolution = {
       
       // Font awesome for font based icons.
       compile ":font-awesome-resources:4.2.0.0"
-      
       // Job scheduler plugin.
       compile ":quartz:1.0.1"
 
       // II: Added.. Groping around in the dark a bit..
       // compile ":compass-sass:0.7" - OK this causes an exception
       
+      runtime ':gsp-resources:0.4.4', {
+        excludes 'resources'
+      }
+      compile ":font-awesome-resources:3.2.1", {
+        excludes 'resources'
+      }
+            
       /** Moved plugins from the properties file to here **/
       compile ':audit-logging:0.5.4' // SO: Tried upgrading to 0.5.5.3, but this caused a null pointer to be thrown.
       compile ':executor:0.3'

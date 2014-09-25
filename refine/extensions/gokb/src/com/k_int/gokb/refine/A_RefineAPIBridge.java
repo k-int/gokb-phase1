@@ -215,7 +215,7 @@ public abstract class A_RefineAPIBridge extends Command {
         RefineServlet.setUserAgent(connection);
 
         // Set the custom refine extension property.
-        connection.setRequestProperty("GOKb-version", GOKbModuleImpl.VERSION);
+        connection.setRequestProperty("GOKb-version", GOKbModuleImpl.getVersion());
 
         // If we have user details set then we should use basic auth to add the details to the header.
         String details = GOKbModuleImpl.getCurrentUserDetails();

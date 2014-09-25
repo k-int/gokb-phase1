@@ -4,7 +4,6 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
 import javax.servlet.ServletConfig;
@@ -36,7 +35,14 @@ public class GOKbModuleImpl extends ButterflyModuleImpl {
     
     private RefineWorkspace[] workspaces;
 
-    public static final String VERSION = "3.1";
+    private static String version = null;
+    public static String getVersion() {
+      if (version == null) {
+        singleton.getProperties().getString("module.version");
+      }
+      
+      return version;
+    }
 
     private static String userDetails = null;
 
@@ -47,9 +53,14 @@ public class GOKbModuleImpl extends ButterflyModuleImpl {
     public static void setCurrentUserDetails(String username, String password) {
         userDetails = Base64.encodeBase64String((username + ":" + password).getBytes());
         
-//        // Test restart here.
+        // Test restart here.
+//        File module_path = singleton.getPath().getParentFile().getParentFile();
 //        try {
-//          Updator.restart();
+//          Updater updt = new Updater(
+//            module_path,
+//            new URL("http://d7.localhost/test.zip"),
+//            singleton.getPath().getParentFile().getParentFile());
+//          updt.updateAndRestart();
 //        } catch (IOException e) {
 //          // TODO Auto-generated catch block
 //          e.printStackTrace();
@@ -84,26 +95,25 @@ public class GOKbModuleImpl extends ButterflyModuleImpl {
         _logger.info("Connection timeout set to " + (double)((double)properties.getInt("timeout") / (double)60000) + " minutes");
     }
     
+    @SuppressWarnings("unchecked")
     private void addWorkspaces () throws IOException {
       
       // Get the file-based project manager.
       File current_ws = ((FileProjectManager)FileProjectManager.singleton).getWorkspaceDir();
       
       // Load the list from the properties file.
-      @SuppressWarnings("unchecked")
       List<String> apis = properties.getList("api.entry");
       
       // Include local?
-      if (properties.containsKey("localapi") && properties.getBoolean("localapi")) {
-        apis.addAll(0,
-          Arrays.asList(new String[]{
-            "Local", "local", "http://localhost:8080/gokb/api/"
-        }));
+      if (properties.containsKey("apis")) {
+        
+        // Add any passed in via command line too. We add these as priorities.
+        apis.addAll(0, properties.getList("apis"));
       }
       
       // Check that the list length is even as each should be in pairs.
       if (apis.size() % 3 != 0) {
-        _logger.error("APIs must be defined as name/folder_suffix/url tuples.");
+        _logger.error("APIs must be defined as \"name,folder_suffix,url\" tuples.");
       } else {
         
         // The workspaces.
@@ -143,10 +153,11 @@ public class GOKbModuleImpl extends ButterflyModuleImpl {
       // Now we re-init the project manager, with our new directory.
       FileProjectManager.initialize(newWorkspace.getWsFolder());
       
-      _logger.info("Now using workspace '" + newWorkspace.getName() + "' at URL '" +
-        newWorkspace.getService().getURL() + "'");
+      _logger.info(
+        "Now using workspace '" + newWorkspace.getName() + "' at URL '" +
+            newWorkspace.getService().getURL() + "'");
       
-      // Need to clear loggin information too.
+      // Need to clear login information too.
       userDetails = null;
       _logger.info("User login details reset to force login on workspace change.");
     }
@@ -220,32 +231,50 @@ public class GOKbModuleImpl extends ButterflyModuleImpl {
         // Load our custom properties.
         File modFile = new File(f,"MOD-INF");
         if (modFile.exists()) {
-            try {
-                // Get the existing module properties and overload with our extras.
-                File propFile = new File(modFile,"gokb.properties");
-                if (propFile.exists()) {
-                    ExtendedProperties p = new ExtendedProperties();
-                    _logger.info("Loading GOKb properties ({})", propFile);
-                    BufferedInputStream stream = null;
-                    try {
-                        stream = new BufferedInputStream(new FileInputStream(propFile));
-                        p.load(stream);
-                    } finally {
-                        // Close the stream.
-                        if (stream != null) stream.close();
-                    }
+          
+          // Read in the gokb properties.
+          ExtendedProperties p = loadProperties (new File(modFile,"gokb.properties"));
 
-                    // Add module properties to the GOKb properties to allow,
-                    // command-line passed params to override these values.
-                    p.combine(getProperties());
+          // Also need to add the regex properties from the regex file.
+          p.combine(
+            loadProperties (new File(modFile,"regex.properties"))
+          );
+          
+          // Add module properties to the GOKb properties to allow,
+          // command-line passed params to override these values.
+          p.combine(getProperties());
 
-                    // Set this modules properties.
-                    setProperties(p);
-                }
-            } catch (Exception e) {
-                _logger.error("Error loading GOKb properties", e);
-            }
+          // Set this modules properties.
+          setProperties(p);
         }
+    }
+    
+    private ExtendedProperties loadProperties (File propFile) {
+      ExtendedProperties p = new ExtendedProperties();
+      try {
+        if (propFile.exists()) {
+            _logger.info("Loading GOKb properties ({})", propFile);
+            BufferedInputStream stream = null;
+            try {
+                stream = new BufferedInputStream(new FileInputStream(propFile));
+                p.load(stream);
+            } finally {
+                // Close the stream.
+                if (stream != null) stream.close();
+            }
+
+            // Add module properties to the GOKb properties to allow,
+            // command-line passed params to override these values.
+            p.combine(getProperties());
+
+            // Set this modules properties.
+            setProperties(p);
+        }
+      } catch (Exception e) {
+          _logger.error("Error loading GOKb properties", e);
+      }
+      
+      return p;
     }
 
     private void swapImportControllers() {

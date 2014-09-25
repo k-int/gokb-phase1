@@ -2,7 +2,7 @@
 
 <!--+
     |
-    |  GOKb extension build file for (open/goolge)refine.
+    | GOKb extension build file for (open/goolge)refine.
     | This Ant file will build the gokb extension from within a pre-built version of refine.   
     |                
     +-->
@@ -13,15 +13,16 @@
 	    <property name="name" value="gokb"/>
 	    <property name="version" value="3.0"/>
 	    <property name="revision" value="${DSTAMP}${TSTAMP}"/>
-	    <property name="ext.dir" value="${dist.dir}/${name}"/>
 	    <property name="fullname" value="${name}-${version}-${revision}" />
 	    
-	    <property name="refine.dir" value="${basedir}/../../../" />
-    	<property name="dist.dir" value="${refine.dir}/dist"/>
+	    <property name="refine.dir" value="${basedir}/../../" />
+      <property name="main.dir" value="${refine.dir}/main" />
+	    <property name="dist.dir" value="${refine.dir}/dist"/>
+	    <property name="ext.dir" value="${dist.dir}/${name}"/>
 	    <property name="server.lib.dir" value="${refine.dir}/server/lib" />
 
-	    <property name="refine.webinf.dir" value="${refine.dir}/webapp/WEB-INF" />
-	    <property name="refine.modinf.dir" value="${refine.dir}/webapp/modules/core/MOD-INF" />
+	    <property name="refine.webinf.dir" value="${main.dir}/webapp/WEB-INF" />
+	    <property name="refine.modinf.dir" value="${main.dir}/webapp/modules/core/MOD-INF" />
 	    <property name="refine.classes.dir" value="${refine.webinf.dir}/classes" />
 	    <property name="refine.lib.dir" value="${refine.webinf.dir}/lib" />
 	    
@@ -56,6 +57,7 @@
 	    <target name="build" depends="build_java"/>
 
 	    <target name="dist" depends="build">
+	        <mkdir dir="${dist.dir}"/>
 	        <mkdir dir="${ext.dir}"/>
 	     
 	         <copy todir="${ext.dir}/module">
@@ -65,17 +67,14 @@
 	                 <exclude name="**/src/*"/>
 	             </fileset>
 	         </copy>
+	    	
+	         <!-- Ensure the property contains the full version string (fullname) -->
+	         <propertyfile file="${ext.dir}/module/MOD-INF/gokb.properties" comment="GOKb Module properties.">
+	         	<entry key="module.version" value="${fullname}" />
+	         </propertyfile>
 
-	         <!-- <copy todir="${ext.dir}/licenses">
-	             <fileset dir="${basedir}/licenses">
-	                 <include name="**"/>
-	             </fileset>
-	         </copy> -->
-	         <!-- <copy file="${basedir}/LICENSE.txt" tofile="${ext.dir}/LICENSE.txt"/>
-	         <copy file="${basedir}/README.txt" tofile="${ext.dir}/README.txt"/> -->
-	         
 	         <zip destfile="${dist.dir}/${fullname}.zip">
-	            <zipfileset dir="${ext.dir}/..">
+	            <zipfileset dir="${ext.dir}">
 	                <include name="**/**"/>
 	            </zipfileset>
 	         </zip>
