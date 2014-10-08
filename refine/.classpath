@@ -74,7 +74,6 @@
 	<classpathentry kind="lib" path="main/webapp/WEB-INF/lib/xercesImpl-2.11.jar"/>
 	<classpathentry kind="lib" path="main/webapp/WEB-INF/lib/xml-apis.jar"/>
 	<classpathentry kind="lib" path="main/webapp/WEB-INF/lib/xmlbeans-2.3.0.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/java-6-oracle"/>
 	<classpathentry kind="lib" path="server/lib/jdatapath-alpha2.jar"/>
 	<classpathentry kind="lib" path="server/lib/jetty-6.1.22.jar"/>
 	<classpathentry kind="lib" path="server/lib/jetty-util-6.1.22.jar"/>
@@ -84,5 +83,6 @@
 	<classpathentry kind="lib" path="server/lib/slf4j-api-1.5.6.jar"/>
 	<classpathentry kind="lib" path="server/lib/slf4j-log4j12-1.5.6.jar"/>
 	<classpathentry kind="lib" path="extensions/gokb/module/MOD-INF/lib/gson-2.2.4.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/java-7-oracle"/>
 	<classpathentry kind="output" path="build"/>
 </classpath>
