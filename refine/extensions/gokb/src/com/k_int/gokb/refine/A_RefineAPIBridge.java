@@ -137,7 +137,6 @@ public abstract class A_RefineAPIBridge extends Command {
 
             writeFileData (dos, name, name, (InputStream)fileData);
 
-
           } else if (fileData instanceof ByteArrayOutputStream) {    
             // Copy data to a byteArrayInputStream...
             ByteArrayOutputStream out = (ByteArrayOutputStream)fileData;

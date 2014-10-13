@@ -338,6 +338,7 @@ class ApiController {
           
           // Save the object.
           src.save (failOnError:true)
+          project.save(failOnError:true, flush:true)
         }
 
         // Generate a filename...
