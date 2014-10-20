@@ -72,20 +72,10 @@
         </ul>
         <!-- /.navbar-top-links -->
       </sec:ifLoggedIn>
-      <sec:ifNotLoggedIn>
-        <ul class="nav navbar-nav navbar-right">
-          <li><g:link controller="register"><i class="fa fa-edit fa-fw"></i> Register</g:link></li>
-          <li><g:link controller="register" action="forgotPassword"><i class="fa fa-edit fa-fw"></i> Forgotten Password</g:link></li>
-          <li><g:link controller="login"><i class="fa fa-sign-in fa-fw"></i> Sign in</g:link></li>
-        </ul>
-        <!-- /.navbar-top-links -->
-      </sec:ifNotLoggedIn>
       
       <div class="navbar-default sidebar" role="navigation">
         <div class="sidebar-nav navbar-collapse">
           <ul class="nav" id="side-menu">
-            <li class="${params?.controller == "welcome"  ? 'active' : ''}"><g:link controller="welcome"><i class="fa fa-dashboard fa-fw"></i> My Dashboard</g:link></li>
-            
             <sec:ifLoggedIn>
               <li class="${params?.controller == "home" && params?.action == 'home' ? 'active' : ''}"><g:link controller="home"><i class="fa fa-dashboard fa-fw"></i> My Dashboard</g:link></li>
               <li class="${params?.controller == "search" || params?.controller == "globalSearch"  ? 'active' : ''}"><a href="#"><i class="fa fa-search fa-fw"></i>Search<span class="fa arrow"></span></a>
