@@ -62,7 +62,7 @@ class TitleLookupService {
     result
   }
 
-  def find (String title, String publisher_name, def identifiers, def user = null) {
+  def find (String title, String publisher_name, def identifiers, def user = null, def project = null) {
 
     // The TitleInstance
     TitleInstance the_title = null
@@ -109,7 +109,7 @@ class TitleLookupService {
                 the_title,
                 "'${title}' added as a variant of '${the_title.name}'.",
                 "No 1st class ID supplied but reasonable match was made on the title name.",
-                user
+                user, project
                 )
 
           } else {
@@ -123,7 +123,7 @@ class TitleLookupService {
                 the_title,
                 "New TI created.",
                 "No 1st class ID supplied and no match could be made on title name.",
-                user
+                user, project
                 )
           }
         }
@@ -132,7 +132,7 @@ class TitleLookupService {
       // Single component match.
         log.debug ("Title class one identifier lookup yielded a single match.")
 
-        the_title = singleTIMatch(title, norm_title, matches[0], user)
+        the_title = singleTIMatch(title, norm_title, matches[0], user, project)
 
         break;
       default :
@@ -145,7 +145,7 @@ class TitleLookupService {
     if (the_title) {
 
       // Add the publisher.
-      addPublisher(publisher_name, the_title, user)
+      addPublisher(publisher_name, the_title, user, project)
 
 
       // II: Changed the following - I think/worry it causes DB row churn.
@@ -174,7 +174,7 @@ class TitleLookupService {
     the_title
   }
 
-  private TitleInstance addPublisher (String publisher_name, TitleInstance ti, user = null) {
+  private TitleInstance addPublisher (publisher_name, ti, user = null, project = null) {
 
     if ( publisher_name != null ) {
       // Lookup our publisher.
@@ -202,7 +202,7 @@ class TitleLookupService {
               ti,
               "Added '${publisher.name}' as a publisher on '${ti.name}'.",
               "Publisher supplied in ingested file is different to any already present on TI.",
-              user
+              user, project
             )
           }
         }
@@ -243,7 +243,7 @@ class TitleLookupService {
     ti
   }
 
-  private TitleInstance singleTIMatch(String title, String norm_title, TitleInstance ti, User user) {
+  private TitleInstance singleTIMatch(String title, String norm_title, TitleInstance ti, User user, project = null) {
 
     // The threshold for a good match.
     double threshold = grailsApplication.config.cosine.good_threshold
@@ -281,7 +281,7 @@ class TitleLookupService {
             ti,
             "'${title}' added as a variant of '${ti.name}'.",
             "Match was made on 1st class identifier but title name seems to be very different.",
-            user
+            user, project
             )
         break
     }

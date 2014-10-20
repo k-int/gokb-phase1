@@ -8,11 +8,13 @@ import groovy.util.logging.*
 @Log4j
 class TitleInstance extends KBComponent {
 
+
   // title is now NAME in the base component class...
   RefdataValue	medium
   RefdataValue	pureOA
   RefdataValue	continuingSeries
   RefdataValue	reasonRetired
+  RefdataValue	oa
   Date publishedFrom
   Date publishedTo
 //  String imprint
@@ -78,6 +80,7 @@ class TitleInstance extends KBComponent {
     medium (nullable:true, blank:false)
     pureOA (nullable:true, blank:false)
     reasonRetired (nullable:true, blank:false)
+    oa (nullable:true, blank:false)
 //    imprint (nullable:true, blank:false)
     publishedFrom (nullable:true, blank:false)
     publishedTo (nullable:true, blank:false)
@@ -86,6 +89,7 @@ class TitleInstance extends KBComponent {
   def availableActions() {
     [ [code:'method::deleteSoft', label:'Delete'],
       [code:'title::transfer', label:'Title Transfer'],
+      [code:'title::change', label:'Title Change'],
       // [code:'title::reconcile', label:'Title Reconcile'] 
     ]
   }
@@ -167,11 +171,13 @@ class TitleInstance extends KBComponent {
   static def refdataFind(params) {
     def result = [];
     def ql = null;
-    ql = TitleInstance.findAllByNameIlike("${params.q}%",params)
+    // ql = TitleInstance.findAllByNameIlike("${params.q}%",params)
+    // Return all titles where the title matches (Left anchor) OR there is an identifier for the title matching what is input
+    ql = TitleInstance.executeQuery("select t.id, t.name from TitleInstance as t where lower(t.name) like ? or exists ( select c from Combo as c where c.fromComponent = t and c.toComponent in ( select id from Identifier as id where id.value like ? ) )", ["${params.q}%","${params.q}%"],[max:20]);
 
     if ( ql ) {
       ql.each { t ->
-        result.add([id:"${t.class.name}:${t.id}",text:"${t.name}"])
+        result.add([id:"org.gokb.cred.TitleInstance:${t[0]}",text:"${t[1]} "])
       }
     }
 
@@ -312,4 +318,6 @@ class TitleInstance extends KBComponent {
     }
     return result;
   }
+
+
 }

@@ -11,8 +11,7 @@
     <g:annotatedLabel owner="${d}" property="status">Status</g:annotatedLabel>
   </dt>
   <dd>
-    <g:xEditableRefData owner="${d}" field="status"
-      config='KBComponent.Status' />
+    <g:xEditableRefData owner="${d}" field="status" config='KBComponent.Status' />
   </dd>
 
   <dt>
@@ -32,7 +31,7 @@
   </dd>
 
   <dt>
-    <g:annotatedLabel owner="${d}" property="currentPubisher">Current Publisher</g:annotatedLabel>
+    <g:annotatedLabel owner="${d}" property="currentPubisher">Latest Publisher</g:annotatedLabel>
   </dt>
   <dd>
     ${d.currentPublisher}&nbsp;
@@ -87,18 +86,21 @@
                 <ul>
                   <g:each in="${he.from}" var="ft">
                     <li><g:if test="${ft != null}">
+                        <g:if test="${ft.id == d.id}"><b></g:if>
                         <g:link controller="resource" action="show"
                           id="${ft?.class.name}:${ft.id}">
                           ${ft.name}
                         </g:link> (
-                      <g:formatDate
-                          format="${session.sessionPreferences?.globalDateFormat}"
-                          date="${ft.publishedFrom}" />
+
+                        <g:formatDate format="${session.sessionPreferences?.globalDateFormat}" date="${ft.publishedFrom}" />
+
                         <em>To</em>
                         <g:formatDate
                           format="${session.sessionPreferences?.globalDateFormat}"
                           date="${ft.publishedTo}" /> ) 
-                    </g:if> <g:else>From title not present</g:else></li>
+                        <g:if test="${ft.id == d.id}"></b></g:if>
+                      </g:if> <g:else>From title not present</g:else>
+                    </li>
                   </g:each>
                 </ul>
               </td>
@@ -107,6 +109,7 @@
                   <g:each in="${he.to}" var="ft">
                     <li>
                     	<g:if test="${ft != null}">
+                        <g:if test="${ft.id == d.id}"><b></g:if>
                         <g:link controller="resource" action="show"
                           id="${ft.class.name}:${ft.id}">
                           ${ft.name}
@@ -118,6 +121,7 @@
                         <g:formatDate
                           format="${session.sessionPreferences?.globalDateFormat}"
                           date="${ft.publishedTo}" /> )
+                        <g:if test="${ft.id == d.id}"></b></g:if>
 	                    </g:if>
 	                    <g:else>From title not present</g:else>
                     </li>
@@ -179,11 +183,11 @@
           </dd>
 
           <dt>
-            <g:annotatedLabel owner="${d}" property="pureOA">pureOA</g:annotatedLabel>
+            <g:annotatedLabel owner="${d}" property="oa">OA</g:annotatedLabel>
           </dt>
           <dd>
-            <g:xEditableRefData owner="${d}" field="pureOA"
-              config='TitleInstance.PureOA' />
+            <g:xEditableRefData owner="${d}" field="oa"
+              config='TitleInstance.OAStatus' />
           </dd>
 
           <dt>
@@ -418,6 +422,16 @@
           </tbody>
         </table>
       </dd>
+
+        <g:form controller="ajaxSupport" action="addToStdCollection" class="form-inline">
+          <input type="hidden" name="__context" value="${d.class.name}:${d.id}" />
+          <input type="hidden" name="__property" value="publisher" />
+          <dt>Add Publisher:</td>
+          <dd>
+            <g:simpleReferenceTypedown class="form-control input-xxlarge" name="__relatedObject" baseClass="org.gokb.cred.Org" /><button type="submit" class="btn btn-default btn-primary btn-sm ">Add</button>
+          </dd>
+        </g:form>
+
 
     </div>
 
