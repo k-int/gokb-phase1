@@ -31,9 +31,10 @@ class FTUpdateService {
     log.debug("Execute IndexUpdateJob starting at ${new Date()}");
     def start_time = System.currentTimeMillis();
 
-    org.elasticsearch.groovy.node.GNode esnode = ESWrapperService.getNode()
-    org.elasticsearch.groovy.client.GClient esclient = esnode.getClient()
+    log.debug("Get client");
+    def esclient = ESWrapperService.getClient()
 
+    log.debug("Components");
     updateES(esclient, org.gokb.cred.KBComponent.class) { kbc ->
 
       def result
@@ -100,7 +101,7 @@ class FTUpdateService {
         def idx_record = recgen_closure(r)
 
         if ( idx_record != null ) {
-          def future = esclient.index {
+          def future = org.elasticsearch.groovy.client.ClientExtensions.indexAsync(esclient) {
             index "gokb"
             type "component"
             id idx_record['_id']
@@ -150,59 +151,4 @@ class FTUpdateService {
     updateFTIndexes();
   }
  
-  def oldClearDownAndInitES() {
-
-    log.debug("Clear down and init ES");
-    org.elasticsearch.groovy.node.GNode esnode = ESWrapperService.getNode()
-    org.elasticsearch.groovy.client.GClient esclient = esnode.getClient()
-
-    // Get hold of an index admin client
-    org.elasticsearch.groovy.client.GIndicesAdminClient index_admin_client = new org.elasticsearch.groovy.client.GIndicesAdminClient(esclient);
-
-    try {
-      // Drop any existing kbplus index
-      log.debug("Dropping old ES index....");
-      def future = index_admin_client.delete {
-        indices 'gokb'
-      }
-      future.get()
-      log.debug("Drop old ES index completed OK");
-    }
-    catch ( Exception e ) {
-      log.warn("Problem deleting index...",e);
-    }
-
-    // Create an index if none exists
-    log.debug("Create new ES index....");
-    def future = index_admin_client.create {
-      index 'gokb'
-    }
-    future.get()
-
-    log.debug("Add title mappings....");
-    future = index_admin_client.putMapping {
-      indices 'gokb'
-      type 'component'
-      source  {
-        'component' {
-          properties {
-            name : {
-              type : 'multi_field'
-              fields : {
-                name : [ type : 'string', analyzer : 'snowball' ]
-                altname : [ type : 'string', analyzer : 'snowball']
-              }
-            }
-            componentType : [ type:"string", analyzer:'not_analyzed' ]
-            identifiers : {
-              namespace : [ type:"string", analyzer:'not_analyzed' ]
-              value : [ type:"string", analyzer:'not_analyzed' ]
-            }
-          }
-        }
-      }
-    }
-    log.debug("Join with future");
-    future.get()
-  }
 }

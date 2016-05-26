@@ -70,8 +70,8 @@ grails.project.dependency.resolution = {
         runtime 'org.apache.tika:tika-parsers:1.6'
         
         runtime 'xalan:xalan:2.7.1'
-        runtime 'org.elasticsearch:elasticsearch:1.3.2'
-        runtime 'org.elasticsearch:elasticsearch-client-groovy:1.3.2'
+        runtime 'org.elasticsearch:elasticsearch:2.0.0'
+        runtime 'org.elasticsearch:elasticsearch-groovy:2.0.0'
         runtime 'net.sf.opencsv:opencsv:2.0'
         
         // Gant. Matched the version that ships with grails bootstrap in Grails 2.3.11
