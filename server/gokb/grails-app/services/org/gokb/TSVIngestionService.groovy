@@ -939,13 +939,13 @@ class TSVIngestionService {
               // }
 
               def pre_create_tipp_time = System.currentTimeMillis();
-              createTIPP(source,
-                         the_kbart,
-                         the_package,
-                         title,
-                         platform,
-                         ingest_date,
-                         ingest_systime)
+              manualCreateTIPP(source,
+                               the_kbart,
+                               the_package,
+                               title,
+                               platform,
+                               ingest_date,
+                               ingest_systime)
             } else {
                log.warn("problem getting the title...")
             }
@@ -987,6 +987,115 @@ class TSVIngestionService {
     parsed_date
   }
 
+  def manualCreateTIPP(the_source,
+                       the_kbart,
+                       the_package,
+                       the_title,
+                       the_platform,
+                       ingest_date,
+                       ingest_systime) {
+
+    // log.debug("TSVIngestionService::createTIPP with pkg:${the_package}, ti:${the_title}, plat:${the_platform}, date:${ingest_date}")
+
+    assert the_package != null && the_title != null && the_platform != null
+
+    def tipp_values = [
+      url:the_kbart.title_url?:'',
+      embargo:the_kbart.embargo_info?:'',
+      coverageNote:the_kbart.coverage_depth?:'',
+      startDate:parseDate(the_kbart.date_first_issue_online),
+      startVolume:the_kbart.num_first_vol_online,
+      startIssue:the_kbart.num_first_issue_online,
+      endDate:parseDate(the_kbart.date_last_issue_online),
+      endVolume:the_kbart.num_last_vol_online,
+      endIssue:the_kbart.num_last_issue_online,
+      source:the_source,
+      accessStartDate:ingest_date,
+      lastSeen:ingest_systime
+    ]
+
+    def tipp = null;
+
+    log.debug("Lookup existing");
+    def tipps = TitleInstance.executeQuery('select tipp from TitleInstancePackagePlatform as tipp, Combo as pkg_combo, Combo as title_combo, Combo as platform_combo  '+
+                                           'where pkg_combo.toComponent=tipp and pkg_combo.fromComponent=? '+
+                                           'and platform_combo.toComponent=tipp and platform_combo.fromComponent = ? '+
+                                           'and title_combo.toComponent=tipp and title_combo.fromComponent = ? ',
+                                          [the_package,the_platform,the_title])
+    if ( tipps.size() == 1 ) {
+      log.debug("found");
+      tipp = tipps[0]
+    }
+
+
+    if (tipp==null) {
+      log.debug("create a new tipp as at ${ingest_date}");
+
+      // These are immutable for a TIPP - only set at creation time
+      // We are going to create tipl objects at the end instead if per title inline.
+      // tipp = TitleInstancePackagePlatform.tiplAwareCreate(tipp_values)
+      tipp = new TitleInstancePackagePlatform(tipp_values)
+
+      // log.debug("Created");
+
+      // because pkg is not a real property, but a hasByCombo, passing the value in the map constuctor
+      // won't actually get this set. So do it manually. Ditto the other fields
+      // tipp.pkg = the_package;
+      // tipp.title = the_title;
+      // tipp.hostPlatform = the_platform;
+      // tipp.source = the_source;
+
+      log.debug("save tipp")
+      tipp.save(failOnError:true, flush:true)
+
+      def status_active = RefdataCategory.lookupOrCreate('Combo.Status', 'Active')
+      def tipp_title_combo_type = RefdataCategory.lookupOrCreate('Combo.Type', 'TitleInstance.Tipps')
+      def tipp_package_combo_type = RefdataCategory.lookupOrCreate('Combo.Type', 'Package.Tipps')
+      def tipp_platform_combo_type = RefdataCategory.lookupOrCreate('Combo.Type', 'Platform.HostedTipps')
+
+      Combo tipp_title_combo = new Combo(
+                                         fromComponent:the_title,
+                                         toComponent:tipp,
+                                         status:status_active,
+                                         type:tipp_title_combo_type).save(flush:true, failOnError:true);    // TitleInstance.Tipps
+      Combo tipp_package_combo = new Combo(
+                                         fromComponent:the_package,
+                                         toComponent:tipp,
+                                         status:status_active,
+                                         type:tipp_package_combo_type).save(flush:true, failOnError:true);  // Package.Tipps
+      Combo tipp_platform_combo = new Combo(
+                                         fromComponent:the_platform,
+                                         toComponent:tipp,
+                                         status:status_active,
+                                         type:tipp_platform_combo_type).save(flush:true, failOnError:true);  // Platform.HostedTipps
+      
+
+    } else {
+      // log.debug("found a tipp to use")
+
+      // Set all properties on the object.
+      tipp_values.each { prop, value ->
+        // Only update if we actually have a change to make
+        if ( tipp."${prop}" != value ) {
+          // Only set the property if we have a value.
+          if (value != null && value != "") {
+            tipp."${prop}" = value
+          }
+        }
+      }
+      log.debug("save tipp")
+      tipp.save(failOnError:true, flush:true)
+    }
+
+    // log.debug("Values updated, set lastSeen");
+
+    if ( ingest_systime ) {
+      // log.debug("Update last seen on tipp ${tipp.id} - set to ${ingest_date}")
+      tipp.lastSeen = ingest_systime;
+    }
+
+    log.debug("createTIPP returning")
+  }
 
   def createTIPP(the_source,
                  the_kbart,
