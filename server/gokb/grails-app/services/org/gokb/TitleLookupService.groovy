@@ -236,7 +236,22 @@ class TitleLookupService {
 
       results['ids'].each {
         if ( ! the_title.ids.contains(it) ) {
-          the_title.ids.add(it);
+          // Double check the identifier we are about to add does not already exist in the system
+          // Combo.Type : KBComponent.Ids
+          def id_combo_type = RefdataCategory.lookupOrCreate('Combo.Type', 'KBComponent.Ids')
+          existing_identifier = Combo.executeQuery("Select c from Combo as c where c.toComponent = ? and c.type = ?",it,id_combo_type);
+          if ( existing_identifier.size() > 0 ) {
+            ReviewRequest.raise(
+              the_title,
+              "Adding an identifier(${it.id}) to this title would create a duplicate record",
+              "The ingest file suggested an identifier (${it.id}) for a title which conflicts with a record already in the system (${existing_identifier[0].fromComponent.id})",
+              user,
+              project
+            )
+          }
+          else {
+            the_title.ids.add(it);
+          }
         }
       }
 
