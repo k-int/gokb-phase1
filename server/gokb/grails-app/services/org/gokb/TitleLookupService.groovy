@@ -234,11 +234,11 @@ class TitleLookupService {
       // Add the publisher.
       addPublisher(publisher_name, the_title, user, project)
 
+      def id_combo_type = RefdataCategory.lookupOrCreate('Combo.Type', 'KBComponent.Ids')
       results['ids'].each {
         if ( ! the_title.ids.contains(it) ) {
           // Double check the identifier we are about to add does not already exist in the system
           // Combo.Type : KBComponent.Ids
-          def id_combo_type = RefdataCategory.lookupOrCreate('Combo.Type', 'KBComponent.Ids')
           existing_identifier = Combo.executeQuery("Select c from Combo as c where c.toComponent = ? and c.type = ?",it,id_combo_type);
           if ( existing_identifier.size() > 0 ) {
             ReviewRequest.raise(
