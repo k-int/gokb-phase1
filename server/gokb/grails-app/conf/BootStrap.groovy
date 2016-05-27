@@ -30,6 +30,8 @@ import org.springframework.security.core.context.SecurityContextHolder as SCH
 import org.springframework.security.authentication. UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.AuthorityUtils
 
+import org.codehaus.groovy.reflection.CachedClass 
+import org.codehaus.groovy.runtime.metaclass.MetaClassRegistryImpl 
 
 
 class BootStrap {
@@ -45,6 +47,8 @@ class BootStrap {
 
     log.info("\n\n\n **WARNING** \n\n\n - Automatic create of component identifiers index is no longer part of the domain model");
     log.info("Create manually with create index norm_id_value_idx on kbcomponent(kbc_normname(64),id_namespace_fk,class)");
+
+    addExtensionModules() 
 
     KBComponent.withTransaction() {
       cleanUpMissingDomains ()
@@ -278,9 +282,46 @@ class BootStrap {
       }
     }
 
+    // http://grails.1312388.n4.nabble.com/groovy-extension-module-and-grails-td4642249.html
     log.debug("Register grails extension classes");
-    org.elasticsearch.client.Client.mixin(org.elasticsearch.groovy.client.ClientExtensions);
+    // org.elasticsearch.client.Client.mixin(org.elasticsearch.groovy.client.ClientExtensions);
+    // https://github.com/elastic/elasticsearch-groovy/blob/master/src/main/resources/META-INF/services/org.codehaus.groovy.runtime.ExtensionModule
   }
+
+  def addExtensionModules() { 
+
+    Map<CachedClass, List<MetaMethod>> map = [:] 
+    ClassLoader classLoader = Thread.currentThread().contextClassLoader 
+
+    try { 
+        Enumeration<URL> resources = classLoader.getResources(MetaClassRegistryImpl.MODULE_META_INF_FILE) 
+        for (URL url in resources) { 
+          if (url.path.contains('groovy-all')) { 
+            // already registered 
+            continue 
+        } 
+        Properties properties = new Properties() 
+        InputStream inStream 
+        try { 
+          inStream = url.openStream() 
+          properties.load(inStream) 
+          GroovySystem.metaClassRegistry.registerExtensionModuleFromProperties(properties, classLoader, map) 
+        } 
+        catch (IOException e) { 
+          throw new GroovyRuntimeException("Unable to load module META-INF descriptor", e) 
+        } 
+        finally { 
+          inStream?.close() 
+        } 
+      } 
+    } 
+    catch (IOException ignored) {} 
+
+    map.each { CachedClass cls, List<MetaMethod> methods -> 
+      cls.setNewMopMethods(methods) 
+    } 
+
+  } 
 
   def registerDomainClasses() {
 

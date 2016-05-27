@@ -39,7 +39,7 @@ class FTUpdateService {
 
       log.debug("Processing kbcomponent ${kbc.id}");
 
-      def result
+      def result = null
 
       if ( kbc instanceof org.gokb.cred.Identifier ) {
         // Don't do anything for identifiers - they are a part of everything else indexed
@@ -59,11 +59,13 @@ class FTUpdateService {
         }
   
         result.componentType=kbc.class.simpleName
-
       }
 
-      result
+      log.debug("recgen closure returning ${result}");
+      return result
     }
+
+    log.debug("doFTUpdate returning cleanly");
   }
 
   def updateES(esclient, domain, recgen_closure) {
@@ -101,16 +103,17 @@ class FTUpdateService {
       while (results.next()) {
         Object r = results.get(0);
 
-        log.debug("Process ${r.id}")
         def idx_record = recgen_closure(r)
-        def rec_id = idx_record['_id']
-        idx_record.remove('_id');
+
+        def rec_id = ''+r.id+':'+r.class.name
+        log.debug("Process ${rec_id} ${idx_record}")
 
 
         if ( idx_record != null ) {
           log.debug("About to index ${idx_record}");
           try {
-            // def future = org.elasticsearch.groovy.client.ClientExtensions.index(esclient) {
+            log.debug("esclient.index...");
+
             def future = esclient.index {
               index 'gokb'
               type 'component'
@@ -120,12 +123,12 @@ class FTUpdateService {
             log.debug("Indexed - wait for future");
             future.actionGet();
           }
-          catch ( Exception e ) {
-            log.error("Problem",e);
+          catch ( Throwable t) {
+            log.error("Problem",t);
           }
         }
 
-        log.debug("Updating");
+        log.debug("Updating timestamp ${r.lastUpdated?.getTime()}");
         latest_ft_record.lastTimestamp = r.lastUpdated?.getTime()
 
         count++
@@ -136,7 +139,12 @@ class FTUpdateService {
           latest_ft_record.save(flush:true);
           cleanUpGorm();
         }
+        else {
+          log.debug("Continue...${count}");
+        }
       }
+
+      log.debug("Close rs");
       results.close();
 
       log.debug("Processed ${total} records for ${domain.name}. Updating timestamp");
