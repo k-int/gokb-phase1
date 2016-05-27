@@ -277,6 +277,9 @@ class BootStrap {
         A_Api.addMethods(c, Class.forName(className))
       }
     }
+
+    log.debug("Register grails extension classes");
+    org.elasticsearch.client.Client.mixin(org.elasticsearch.groovy.client.ClientExtensions);
   }
 
   def registerDomainClasses() {

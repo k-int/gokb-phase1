@@ -37,6 +37,8 @@ class FTUpdateService {
     log.debug("Components");
     updateES(esclient, org.gokb.cred.KBComponent.class) { kbc ->
 
+      log.debug("Processing kbcomponent ${kbc.id}");
+
       def result
 
       if ( kbc instanceof org.gokb.cred.Identifier ) {
@@ -85,7 +87,7 @@ class FTUpdateService {
       def c = domain.createCriteria()
       c.setReadOnly(true)
       c.setCacheable(false)
-      c.setFetchSize(Integer.MIN_VALUE);
+      c.setFetchSize(100)
 
       c.buildCriteria{
           gt('lastUpdated', from)
@@ -98,17 +100,32 @@ class FTUpdateService {
 
       while (results.next()) {
         Object r = results.get(0);
+
+        log.debug("Process ${r.id}")
         def idx_record = recgen_closure(r)
+        def rec_id = idx_record['_id']
+        idx_record.remove('_id');
+
 
         if ( idx_record != null ) {
-          def future = org.elasticsearch.groovy.client.ClientExtensions.indexAsync(esclient) {
-            index "gokb"
-            type "component"
-            id idx_record['_id']
-            source idx_record
+          log.debug("About to index ${idx_record}");
+          try {
+            // def future = org.elasticsearch.groovy.client.ClientExtensions.index(esclient) {
+            def future = esclient.index {
+              index 'gokb'
+              type 'component'
+              id rec_id
+              source idx_record
+            }
+            log.debug("Indexed - wait for future");
+            future.actionGet();
+          }
+          catch ( Exception e ) {
+            log.error("Problem",e);
           }
         }
 
+        log.debug("Updating");
         latest_ft_record.lastTimestamp = r.lastUpdated?.getTime()
 
         count++
@@ -122,17 +139,21 @@ class FTUpdateService {
       }
       results.close();
 
-      println("Processed ${total} records for ${domain.name}");
+      log.debug("Processed ${total} records for ${domain.name}. Updating timestamp");
 
       // update timestamp
       latest_ft_record.save(flush:true);
+
+      log.debug("Updated latest ft record");
     }
     catch ( Exception e ) {
       log.error("Problem with FT index",e);
     }
     finally {
-      log.debug("Completed processing on ${domain.name} - saved ${count} records");
+      log.debug("Completed processing on ${domain.name} - indexed ${count} records");
     }
+
+    log.debug("Return");
   }
 
   def cleanUpGorm() {
