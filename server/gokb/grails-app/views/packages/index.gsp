@@ -50,7 +50,7 @@
                  <li>${f}</li>
                </g:each>
              </ul>
-           <g:each>
+           </g:each>
          </div>
          <div class="col-md-10">
           <table class="table table-striped">
