@@ -92,8 +92,7 @@
           id="">Titles in this package</g:link>
 
         <g:if test="${ editable }">
-          <g:form controller="ajaxSupport" action="addToCollection"
-            class="form-inline">
+          <g:form controller="ajaxSupport" action="addToCollection" class="form-inline" onsubmit="javascript:validateAddTipp()">
             <input type="hidden" name="__context" value="${d.class.name}:${d.id}" />
             <input type="hidden" name="__newObjectClass" value="org.gokb.cred.TitleInstancePackagePlatform" />
             <input type="hidden" name="__addToColl" value="tipps" />
@@ -108,8 +107,7 @@
               </dd>
               <dt></dt>
               <dd>
-                <button type="submit"
-                  class="btn btn-default btn-primary btn-sm ">Add</button>
+                <button type="submit" class="btn btn-default btn-primary btn-sm " >Add</button>
               </dd>
             </dl>
           </g:form>
@@ -155,3 +153,14 @@
     <g:render template="componentStatus" contextPath="../apptemplates"
       model="${[d:displayobj, rd:refdata_properties, dtype:'KBComponent']}" />
   </div>
+
+<script type="text/javascript">
+  function validateAddTipp() {
+    var a=document.forms["Form"]["title"].value;
+    var b=document.forms["Form"]["hostPlatform"].value;
+    if (a==null || a=="" || b==null || b=="") {
+      alert("Title and Platform are required");
+      return false;
+    }
+  }
+</script>
