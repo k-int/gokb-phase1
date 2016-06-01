@@ -1090,6 +1090,7 @@ abstract class KBComponent {
     Combo.executeUpdate("delete from Combo as c where c.fromComponent=:component or c.toComponent=:component",[component:this])
     KBComponentAdditionalProperty.executeUpdate("delete from KBComponentAdditionalProperty as c where c.fromComponent=:component",[component:this]);
     KBComponentVariantName.executeUpdate("delete from KBComponentVariantName as c where c.owner=:component",[component:this]);
+    ReviewRequestAllocationLog.executeUpdate("delete from ReviewRequestAllocationLog as c where c.rr.componentToReview=:component",[component:this]);
     ReviewRequest.executeUpdate("delete from ReviewRequest as c where c.componentToReview=:component",[component:this]);
     ComponentPerson.executeUpdate("delete from ComponentPerson as c where c.component=:component",[component:this]);
     ComponentSubject.executeUpdate("delete from ComponentSubject as c where c.component=:component",[component:this]);
