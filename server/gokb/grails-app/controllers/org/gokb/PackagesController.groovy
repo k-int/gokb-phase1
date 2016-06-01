@@ -83,6 +83,13 @@ class PackagesController {
                          query {
                            query_string (query: query_str)
                          }
+                         facets {
+                           type {
+                             terms {
+                               field = 'componentType'
+                             }
+                           }
+                         }
                        }
                      }
 

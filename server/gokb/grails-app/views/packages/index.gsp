@@ -42,7 +42,17 @@
        </div>
 
        <div class="row">
-         <div class="col-md-12">
+         <div class="col-md-2">
+           <g:each in="${facets}" var="k,v">
+             ${k}
+             <ul>
+               <g:each in="${v}" var="f">
+                 <li>${f}</li>
+               </g:each>
+             </ul>
+           <g:each>
+         </div>
+         <div class="col-md-10">
           <table class="table table-striped">
             <thead>
               <tr>
