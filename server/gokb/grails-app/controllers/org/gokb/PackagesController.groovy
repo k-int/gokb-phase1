@@ -56,18 +56,21 @@ class PackagesController {
     org.elasticsearch.groovy.client.GClient esclient = esnode.getClient()
     try {
 
-      if ( params.q && params.q.length() > 0) {
+      def query = params.q
+      if ( query == null || query.length() == 0) {
+        query = '*';
+      }
 
         // Comment out replacement of ' by " so we can do exact string searching on identifiers - not sure what the use case
         // was for this anyway. Pls document in comment and re-add if needed.
         // params.q = params.q.replace('"',"'")
-        params.q = params.q.replace('[',"(")
-        params.q = params.q.replace(']',")")
+        query = query.replace('[',"(")
+        query = query.replace(']',")")
 
         result.max = params.max ? Integer.parseInt(params.max) : 10;
         result.offset = params.offset ? Integer.parseInt(params.offset) : 0;
 
-        def query_str = 'componentType:Package AND '+(params.q?:'*');
+        def query_str = 'componentType:Package AND '+query;
 
         log.debug("Searching for ${query_str}");
 
@@ -104,7 +107,6 @@ class PackagesController {
             result.facets[facet.key] = facet_values
           }
         }
-      }
     }
     catch ( Exception e ) {
       log.debug("Problem",e)
