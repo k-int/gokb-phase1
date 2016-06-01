@@ -306,6 +306,9 @@ abstract class KBComponent {
   // Read only flag should be honoured in the UI
   boolean systemComponent = false
 
+  // used in data tidy routines
+  KBComponent duplicateOf
+
   // ids moved to combos.
   static manyByCombo = [
     ids : Identifier,
@@ -346,6 +349,7 @@ abstract class KBComponent {
     tags joinTable: [name: 'kb_component_tags_value', key: 'kbctgs_kbc_id', column: 'kbctgs_rdv_id']
     dateCreated column:'kbc_date_created'
     lastUpdated column:'kbc_last_updated'
+    duplicateOf column:'kbc_duplicate_of'
     reviewRequests sort: 'id', order: 'asc'
     lastSeen column:'kbc_last_seen'
     lastUpdateComment column:'kbc_last_update_comment'
@@ -355,13 +359,14 @@ abstract class KBComponent {
   }
 
   static constraints = {
-    name    (nullable:true, blank:false, maxSize:2048)
-    shortcode  (nullable:true, blank:false, maxSize:128)
-    normname  (nullable:true, blank:false, maxSize:2048)
-    status    (nullable:true, blank:false)
-    editStatus  (nullable:true, blank:false)
-    source (nullable:true, blank:false)
-    lastSeen (nullable:true, blank:false)
+                 name (nullable:true, blank:false, maxSize:2048)
+            shortcode (nullable:true, blank:false, maxSize:128)
+          duplicateOf (nullable:true, blank:false)
+             normname (nullable:true, blank:false, maxSize:2048)
+               status (nullable:true, blank:false)
+           editStatus (nullable:true, blank:false)
+               source (nullable:true, blank:false)
+             lastSeen (nullable:true, blank:false)
     lastUpdateComment (nullable:true, blank:false)
   }
 
