@@ -1082,4 +1082,18 @@ abstract class KBComponent {
           return result
     }
   }
+
+  def expunge() {
+    log.debug("Component expunge");
+    def result = [deleteType:this.class.name, deleteId:this.id]
+    log.debug("Removing all components");
+    Combo.executeUpdate("delete from Combo as c where c.fromComponent=:component or c.toComponent=:component",[component:this])
+    KBComponentAdditionalProperty.executeUpdate("delete from KBComponentAdditionalProperty as c where c.fromComponent=:component",[component:this]);
+    KBComponentVariantName.executeUpdate("delete from KBComponentVariantName as c where c.owner=:component",[component:this]);
+    ReviewRequest.executeUpdate("delete from ReviewRequest as c where c.componentToReview=:component",[component:this]);
+    ComponentPerson.executeUpdate("delete from ComponentPerson as c where c.component=:component",[component:this]);
+    ComponentSubject.executeUpdate("delete from ComponentSubject as c where c.component=:component",[component:this]);
+    this.delete(flush:true, failOnError:true)
+    result;
+  }
 }

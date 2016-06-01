@@ -12,6 +12,7 @@ class AdminController {
   def refineService
   def titleAugmentService
   def concurrencyManagerService
+  def cleanupService
 
   def tidyOrgData() {
 
@@ -217,5 +218,11 @@ class AdminController {
 
     log.debug("Return");
     result
+  }
+
+  def cleanup() {
+    log.debug("start cleanup");
+    cleanupService.expungeDeletedComponents()
+    render(view: "logViewer", model: logViewer())
   }
 }
