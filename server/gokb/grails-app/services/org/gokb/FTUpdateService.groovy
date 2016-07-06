@@ -71,8 +71,9 @@ class FTUpdateService {
 
       def latest_ft_record = FTControl.findByDomainClassNameAndActivity(domain.name,'ESIndex')
 
-      log.debug("result of findByDomain: ${latest_ft_record}");
+      log.debug("result of findByDomain(${domain.name}): ${latest_ft_record}");
       if ( !latest_ft_record) {
+        log.debug("Create new FT control record");
         latest_ft_record=new FTControl(domainClassName:domain.name,activity:'ESIndex',lastTimestamp:0)
       }
 
@@ -93,7 +94,7 @@ class FTUpdateService {
 
       def results = c.scroll(ScrollMode.FORWARD_ONLY)
     
-      log.debug("Query completed.. processing rows...");
+      log.debug("Query completed.. processing rows... fetchSize==${Integer.MIN_VALUE}");
 
       while (results.next()) {
         Object r = results.get(0);
@@ -119,15 +120,24 @@ class FTUpdateService {
           cleanUpGorm();
         }
       }
+
+      log.debug("Closing RS");
       results.close();
 
       println("Processed ${total} records for ${domain.name}");
 
       // update timestamp
       latest_ft_record.save(flush:true);
+
+      println("Processing completd OK");
     }
     catch ( Exception e ) {
+      log.debug("Problem with FT index",e);
       log.error("Problem with FT index",e);
+    }
+    catch ( Throwable t ) {
+      log.debug("Problem with FT index",t);
+      log.error("Problem with FT index",t);
     }
     finally {
       log.debug("Completed processing on ${domain.name} - saved ${count} records");
