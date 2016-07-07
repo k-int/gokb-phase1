@@ -35,6 +35,7 @@ grails.project.dependency.resolution = {
     inherits("global") {
         // specify dependency exclusions here; for example, uncomment this to disable ehcache:
         // excludes 'ehcache'
+		excludes "gant_groovy1.8"
     }
     log "error" // log level of Ivy resolver, either 'error', 'warn', 'info', 'debug' or 'verbose'
     checksums true // Whether to verify checksums on resolve
@@ -74,8 +75,8 @@ grails.project.dependency.resolution = {
         runtime 'org.elasticsearch:elasticsearch-client-groovy:1.3.2'
         runtime 'net.sf.opencsv:opencsv:2.0'
         
-        // Gant. Matched the version that ships with grails bootstrap in Grails 2.3.11
-        runtime 'org.codehaus.gant:gant_groovy1.8:1.9.6'
+        // Gant. Upgrade to one that ships with ANT 1.9 as < 1.9 is not Java8 compatible.
+        compile 'org.codehaus.gant:gant_groovy1.8:1.9.10'
         
         compile 'com.github.sommeri:less4j:1.8.2'
         
