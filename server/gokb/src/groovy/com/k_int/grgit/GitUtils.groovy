@@ -146,7 +146,7 @@ class GitUtils {
   private static Grgit doGetOrCreateRepo (File loc, String uri, ProgressMonitor monitor, retry) {
     Grgit git
     
-    log.debug ("Checking ${loc}...")
+    log.debug ("Checking ${loc}, uri:${uri}...")
     try {
       
       // Try opening the repo.
@@ -157,10 +157,22 @@ class GitUtils {
     
       // Clone the repo.
       log.debug ("No repo found. Cloning from ${uri}")
-      com.k_int.grgit.MonitoredGit.monitor = monitor
-      
-      git = com.k_int.grgit.MonitoredGit.cloneMonitored(dir: loc, uri: (uri))
+      try {
+        // Doing work like this in an exception is fugly -- must chamge.
+        com.k_int.grgit.MonitoredGit.monitor = monitor
+        git = com.k_int.grgit.MonitoredGit.cloneMonitored(dir: loc, uri: (uri))
+      }
+      catch ( Exception inner_e ) {
+        log.error("problem cloning",inner_e);
+      }
+      finally {
+        log.debug("Clone completed");
+      }
     }
+    finally {
+      log.debug("Clone or update complete");
+    }
+
     
     // Reset
     discardAll( git )

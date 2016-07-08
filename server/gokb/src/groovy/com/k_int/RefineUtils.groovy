@@ -82,8 +82,12 @@ class RefineUtils {
       log.debug ("Attempt refine build from ${bxml} using target ${b_target}")
       return antBuild(bxml, ant, b_target)
 
-    } finally {
-
+    } 
+    catch ( Exception e ) {
+      log.error("problem trying to build refine",e);
+    } 
+    finally {
+      log.debug("buildRefine completed");
       // Release any resources.
       git?.close()
     }
@@ -173,38 +177,46 @@ class RefineUtils {
    */
   public static Project antBuild (File bxml, AntBuilder ant,  String target = null, def props = null) {
     Project p = null
-    if (!bxml || !bxml.exists()) {
-      log.debug ("build file not found!")
-      return p
+    try {
+      if (!bxml || !bxml.exists()) {
+        log.debug ("build file not found!")
+        return p
+      }
+
+      if (!ant) {
+        log.debug ("No ant builder supplied.")
+        return p
+      }
+
+      log.debug ("Creating ANT project using file ${bxml}.")
+
+      // Create a project in ANT
+      p = ant.createProject()
+      p.init()
+      p.baseDir = bxml.getParentFile()
+
+      // Execute default target.
+      log.debug ("Using ${p.baseDir} as base directory")
+
+      props?.each { name, val ->
+        p.setProperty("${name}", "${val}")
+      }
+
+      // Configure the project using the build file.
+      ProjectHelper.projectHelper.parse(p, bxml)
+
+      target = target ?: p.defaultTarget
+      log.debug ("Executing target ${target}")
+
+      // Execute Default target.
+      p.executeTarget(target ?: p.defaultTarget)
     }
-
-    if (!ant) {
-      log.debug ("No ant builder supplied.")
-      return p
+    catch ( Exception e ) {
+      log.error("Problem trying to build project",e);
     }
-
-    log.debug ("Creating ANT project using file ${bxml}.")
-
-    // Create a project in ANT
-    p = ant.createProject()
-    p.init()
-    p.baseDir = bxml.getParentFile()
-
-    // Execute default target.
-    log.debug ("Using ${p.baseDir} as base directory")
-
-    props?.each { name, val ->
-      p.setProperty("${name}", "${val}")
+    finally {
+      log.debug("Build completed");
     }
-
-    // Configure the project using the build file.
-    ProjectHelper.projectHelper.parse(p, bxml)
-
-    target = target ?: p.defaultTarget
-    log.debug ("Executing target ${target}")
-
-    // Execute Default target.
-    p.executeTarget(target ?: p.defaultTarget)
 
     return p
   }
