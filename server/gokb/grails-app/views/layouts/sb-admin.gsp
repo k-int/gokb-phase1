@@ -187,10 +187,11 @@
                     <li><g:link controller="admin" action="buildExtension"><i class="fa fa-angle-double-right fa-fw"></i> Build Refine Extensions</g:link></li>
                     <li><g:link controller="admin" action="logViewer"><i class="fa fa-angle-double-right fa-fw"></i> Log Viewer</g:link></li>
                     <li><g:link controller="admin" action="jobs"><i class="fa fa-angle-double-right fa-fw"></i> Manage Jobs</g:link></li>
+                    <li><g:link controller="admin" action="configViewer"><i class="fa fa-angle-double-right fa-fw"></i> Configuration Viewer</g:link></li>
                     <li><g:link controller="user" action="search"><i class="fa fa-angle-double-right fa-fw"></i> User Management Console</g:link></li>
                     <!--
                     <li><g:link controller="api" action="downloadUpdate"><i class="fa fa-angle-double-right fa-fw"></i> Get Refine Extension</g:link></li>
-                    -->
+                    -->Manage Jobs
                     <li class="divider"></li>
                     <li><g:link controller="integration"><i class="fa fa-database fa-fw"></i> Integration API</g:link></li>
                   </ul></li>

@@ -218,4 +218,8 @@ class AdminController {
     log.debug("Return");
     result
   }
+
+  def configViewer() {
+    ['config' : grailsApplication.getFlatConfig()]
+  }
 }
