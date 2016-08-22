@@ -395,6 +395,8 @@ class IntegrationController {
     def title = titleLookupService.find(request.JSON.title, request.JSON.publisher, request.JSON.identifiers, user)
 
     if ( title ) {
+      result.message="Matched title ${title.id}";
+
       log.debug("Looked up title...${title}");
       request.JSON.identifiers.each { id ->
         log.debug("Identifier entry: ${id}");
@@ -412,10 +414,12 @@ class IntegrationController {
       log.debug("Done iterating through identifiers");
     }
     else {
+      result.message="Unable to locate title record";
       log.debug("Unable to locate title");
     }
 
     
+    log.debug("Result of crossReferenceTitle() : ${result}");
 
     render result as JSON
   }
