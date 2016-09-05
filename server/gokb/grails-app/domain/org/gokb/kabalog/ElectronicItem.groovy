@@ -12,9 +12,11 @@ class ElectronicItem extends Item {
   ]
 
   static mapping = {
+    id column:'item_id'
   }
 
   static constraints = {
+    tip(nullable:false, blank:false)
   }
 
 }

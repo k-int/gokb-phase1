@@ -860,7 +860,10 @@ class TSVIngestionService {
           Package.executeUpdate('update Package p set p.insertBenchmark=:elapsed where p.id=:pid AND p.insertBenchmark is null',
                             [pid:the_package_id,elapsed:processing_elapsed]);
           Package.executeUpdate('update Package p set p.lastUpdateComment=:uc, p.lastUpdatedBy=:updateAgent, p.updateBenchmark=:elapsed where p.id=:pid',
-                            [uc:"Direct ingest of file:${datafile.name}[${datafile.id}] completed in ${processing_elapsed}ms, avg per row=${average_milliseconds_per_row}, avg per hour=${average_per_hour}", pid:the_package_id, updateAgent:update_agent, elapsed:processing_elapsed]);
+                            [uc:"Direct ingest of file:${datafile?.name}[${datafile?.id}] completed in ${processing_elapsed}ms, avg per row=${average_milliseconds_per_row}, avg per hour=${average_per_hour}", 
+                             pid:the_package_id, 
+                             updateAgent:update_agent, 
+                             elapsed:processing_elapsed]);
  
         }
       }

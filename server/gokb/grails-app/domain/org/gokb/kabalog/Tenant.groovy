@@ -1,4 +1,4 @@
-package org.gokb.cred
+package org.gokb.kabalog
 
 import javax.persistence.Transient
 
