@@ -15,7 +15,7 @@ environments {
     development {
         dataSource {
             dbCreate = "update"
-            url = "jdbc:postgresql://pghost:5432/gokbdev"
+            url = "jdbc:postgresql://pghost:5432/foliodev"
             username = "knowint"
             password = "knowint"
             driverClassName = "org.postgresql.Driver"
@@ -42,7 +42,7 @@ environments {
     test {
         dataSource {
             dbCreate = "create-drop"
-            url = "jdbc:postgresql://pghost:5432/ebookstest"
+            url = "jdbc:postgresql://pghost:5432/foliotest"
             username = "knowint"
             password = "knowint"
             driverClassName = "org.postgresql.Driver"
@@ -69,7 +69,7 @@ environments {
     production {
         dataSource {
             dbCreate = "update"
-            url = "jdbc:postgresql://pghost:5432/gokb"
+            url = "jdbc:postgresql://pghost:5432/folioprod"
             username = "knowint"
             password = "knowint"
             driverClassName = "org.postgresql.Driver"
