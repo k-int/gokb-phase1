@@ -548,10 +548,12 @@ class TSVIngestionService {
       distance  = 1
     }
     else {
-      // Otherwise -- work out if they are roughly close enough to warrant a good matcg
-      // log.debug("Comparing ${ti.getName()} and ${norm_title}");
-      // distance = GOKbTextUtils.cosineSimilarity(GOKbTextUtils.generateComparableKey(ti.getName()), norm_title) ?: 0
-      distance = GOKbTextUtils.cosineSimilarity(GOKbTextUtils.normaliseString(ti.getName()), norm_title) ?: 0
+      // Otherwise -- work out if they are roughly close enough to warrant a good match
+      log.debug("Comparing ${ti.getName()} and ${norm_title}");
+      def normalised_new_title = GOKbTextUtils.norm2(ti.getName())
+      log.debug("Norm version of new title is ${normalised_new_title}");
+      distance = GOKbTextUtils.cosineSimilarity(normalised_new_title, norm_title) ?: 0
+      log.debug("Distance is ${distance}");
     }
 
     // Check the distance.
@@ -570,12 +572,13 @@ class TSVIngestionService {
           GOKbTextUtils.cosineSimilarity(GOKbTextUtils.normaliseString(alt.variantName), norm_title) >= threshold
         }}:
         // Good match on existing variant titles
-        // log.debug("Good match for TI on variant.")
+        log.debug("Good match for TI on existing variant. (distance ${distance} >= threshold ${threshold})")
         break
 
       case {it >= threshold} :
         // Good match. Need to add as alternate name.
         // log.debug("Good distance match for TI. Add as variant.")
+        log.debug("Good match for TI no existing variant. (distance ${distance} >= threshold ${threshold})")
         ti.addVariantTitle(title)
         break
 
@@ -855,15 +858,18 @@ class TSVIngestionService {
 
 
         Package.withNewTransaction {
-          def update_agent = User.findByUsername('IngestAgent')
+          def update_agent = User.findByUsername('ingestAgent')
           // insertBenchmark updateBenchmark
           Package.executeUpdate('update Package p set p.insertBenchmark=:elapsed where p.id=:pid AND p.insertBenchmark is null',
                             [pid:the_package_id,elapsed:processing_elapsed]);
-          Package.executeUpdate('update Package p set p.lastUpdateComment=:uc, p.lastUpdatedBy=:updateAgent, p.updateBenchmark=:elapsed where p.id=:pid',
+
+          if ( update_agent ) {
+            Package.executeUpdate('update Package p set p.lastUpdateComment=:uc, p.lastUpdatedBy=:updateAgent, p.updateBenchmark=:elapsed where p.id=:pid',
                             [uc:"Direct ingest of file:${datafile?.name}[${datafile?.id}] completed in ${processing_elapsed}ms, avg per row=${average_milliseconds_per_row}, avg per hour=${average_per_hour}", 
                              pid:the_package_id, 
                              updateAgent:update_agent, 
                              elapsed:processing_elapsed]);
+          }
  
         }
       }
@@ -1018,6 +1024,8 @@ class TSVIngestionService {
               the_kbart.additional_authors.each { author ->
                 addPerson(author, author_role, title)
               }
+
+              title.save(flush:true, failOnError:true);
 
               def pre_create_tipp_time = System.currentTimeMillis();
               manualCreateTIPP(source,
@@ -1193,10 +1201,10 @@ class TSVIngestionService {
 
     log.debug("Lookup existing");
     def tipps = TitleInstance.executeQuery('select tipp from TitleInstancePackagePlatform as tipp, Combo as pkg_combo, Combo as title_combo, Combo as platform_combo  '+
-                                           'where pkg_combo.toComponent=tipp and pkg_combo.fromComponent=? '+
-                                           'and platform_combo.toComponent=tipp and platform_combo.fromComponent = ? '+
-                                           'and title_combo.toComponent=tipp and title_combo.fromComponent = ? ',
-                                          [the_package,the_platform,the_title])
+                                           'where pkg_combo.toComponent=tipp and pkg_combo.fromComponent.id=? '+
+                                           'and platform_combo.toComponent=tipp and platform_combo.fromComponent.id = ? '+
+                                           'and title_combo.toComponent=tipp and title_combo.fromComponent.id = ? ',
+                                          [the_package.id,the_platform.id,the_title.id])
     if ( tipps.size() == 1 ) {
       log.debug("found");
       tipp = tipps[0]

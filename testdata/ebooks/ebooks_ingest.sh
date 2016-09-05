@@ -18,19 +18,19 @@ curl -v --user admin:admin -X POST \
   --form flags="+ReviewNewTitles,+ReviewVariantTitles,+ReviewNewOrgs" \
   $GOKB_HOST/gokb/packages/deposit
 
-curl -v --user admin:admin -X POST \
-  --form content=@./elsevier/ScienceDirectStandard_Global_EBook-AgriculturalAndBiologicalSciencesPre-2007_2016-05-23.txt \
-  --form source="ELSEVIER" \
-  --form fmt="elsevier" \
-  --form pkg="Elsevier Global Agriculture and Biological Sciences Pre 2007" \
-  --form platformUrl="http://www.sciencedirect.com/science" \
-  --form format="JSON" \
-  --form providerName="elsevier" \
-  --form providerIdentifierNamespace="ELSEVIER" \
-  --form reprocess="Y" \
-  --form synchronous="Y" \
-  --form flags="+ReviewNewTitles,+ReviewVariantTitles,+ReviewNewOrgs" \
-  $GOKB_HOST/gokb/packages/deposit
+# curl -v --user admin:admin -X POST \
+#   --form content=@./elsevier/ScienceDirectStandard_Global_EBook-AgriculturalAndBiologicalSciencesPre-2007_2016-05-23.txt \
+#   --form source="ELSEVIER" \
+#   --form fmt="elsevier" \
+#   --form pkg="Elsevier Global Agriculture and Biological Sciences Pre 2007" \
+#   --form platformUrl="http://www.sciencedirect.com/science" \
+#   --form format="JSON" \
+#   --form providerName="elsevier" \
+#   --form providerIdentifierNamespace="ELSEVIER" \
+#   --form reprocess="Y" \
+#   --form synchronous="Y" \
+#   --form flags="+ReviewNewTitles,+ReviewVariantTitles,+ReviewNewOrgs" \
+#   $GOKB_HOST/gokb/packages/deposit
 
 # 
 # curl -v --user admin:admin -X POST \
@@ -46,19 +46,21 @@ curl -v --user admin:admin -X POST \
 # 
 # sleep 5 
 # 
-curl -v --user admin:admin -X POST \
-  --form content=@./YBP1.tsv \
-  --form source="ybp" \
-  --form fmt="ybp" \
-  --form pkg="YBP Masterlist" \
-  --form platformUrl="http://ybp.org/" \
-  --form format="JSON" \
-  --form providerName="YBP" \
-  --form providerIdentifierNamespace="YBP" \
-  --form reprocess="Y" \
-  --form synchronous="Y" \
-  --form flags="+ReviewNewTitles,+ReviewVariantTitles,+ReviewNewOrgs" \
-  $GOKB_HOST/gokb/packages/deposit
+
+
+# curl -v --user admin:admin -X POST \
+#   --form content=@./YBP1.tsv \
+#   --form source="ybp" \
+#   --form fmt="ybp" \
+#   --form pkg="YBP Masterlist" \
+#   --form platformUrl="http://ybp.org/" \
+#   --form format="JSON" \
+#   --form providerName="YBP" \
+#   --form providerIdentifierNamespace="YBP" \
+#   --form reprocess="Y" \
+#   --form synchronous="Y" \
+#   --form flags="+ReviewNewTitles,+ReviewVariantTitles,+ReviewNewOrgs" \
+#   $GOKB_HOST/gokb/packages/deposit
 # 
 # sleep 5 
 # 
