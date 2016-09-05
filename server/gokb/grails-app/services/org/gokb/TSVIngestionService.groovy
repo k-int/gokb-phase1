@@ -285,7 +285,7 @@ class TSVIngestionService {
         the_title.name = title;
       }
       else {
-        log.debug("handling a matched title ${matches[0].title} ==? ${title}");
+        log.debug("handling a matched title ${matches[0].name} ==? ${title}");
         // Now we can examine the text of the title.
         the_title = singleTIMatch(title,
                                   norm_title,
