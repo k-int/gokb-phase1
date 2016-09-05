@@ -286,6 +286,15 @@ class TitleInstance extends KBComponent {
             if ( pub_org ) {
               builder."publisher" (['id': pub_org?.id]) {
                 "name" (pub_org?.name)
+                if ( pc.startDate ) {
+                  "startDate" (pc.startDate)
+                }
+                if ( pc.endDate ) {
+                  "startDate" (pc.endDate)
+                }
+                if (pc.status) {
+                  "status" (pc.status)
+                }
               }
             }
           }
