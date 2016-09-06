@@ -550,7 +550,7 @@ class TSVIngestionService {
     else {
       // Otherwise -- work out if they are roughly close enough to warrant a good match
       log.debug("Comparing ${ti.getName()} and ${norm_title}");
-      def normalised_new_title = GOKbTextUtils.norm2(ti.getName())
+      def normalised_new_title = GOKbTextUtils.normaliseString(ti.getName())
       log.debug("Norm version of new title is ${normalised_new_title}");
       distance = GOKbTextUtils.cosineSimilarity(normalised_new_title, norm_title) ?: 0
       log.debug("Distance is ${distance}");
