@@ -213,7 +213,7 @@ class TitleLookupService {
             // Raise a review request
             ReviewRequest.raise(
                 the_title,
-                "'${title}' added as a variant of '${the_title.name}'.",
+                "'${metadata.title}' added as a variant of '${the_title.name}'.",
                 "No 1st class ID supplied but reasonable match was made on the title name.",
                 user, project
                 )
@@ -265,7 +265,7 @@ class TitleLookupService {
         }
         
         // Take whatever we can get if what we have is an unknown title
-        if ( title.startsWith("Unknown Title") ) {
+        if ( metadata.title.startsWith("Unknown Title") ) {
           // Don't go through title matching if we don't have a real title
           the_title = matches[0]
         }
