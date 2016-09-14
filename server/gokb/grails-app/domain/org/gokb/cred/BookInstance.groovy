@@ -22,6 +22,7 @@ class BookInstance extends TitleInstance {
   String summaryOfContent
 
  static mapping = {
+    includes TitleInstance.mapping
             editionNumber column:'bk_ednum'
     editionDifferentiator column:'bk_editionDifferentiator'
          editionStatement column:'bk_editionStatement'
@@ -75,7 +76,7 @@ class BookInstance extends TitleInstance {
       // Wait for the onSave to complete, and the system to release the session, thus freeing the data to
       // other transactions
       synchronized(this) {
-        Thread.sleep(2000);
+        Thread.sleep(3000);
       }
       tls.remapTitleInstance('org.gokb.cred.BookInstance:'+this.id)
     }

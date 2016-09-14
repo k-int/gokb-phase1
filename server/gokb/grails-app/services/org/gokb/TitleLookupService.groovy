@@ -34,7 +34,11 @@ class TitleLookupService {
     // Go through each of the class_one_ids and look for a match.
     ids.each { id_def ->
 
-      if (id_def.type && id_def.value) {
+      // We only treat a component as a match if the matching Identifer
+      // is a class 1 identifier.
+      if (id_def.type && id_def.value && class_one_ids.contains(id_def.type) ) {
+
+        log.debug("Attempt match using component ${id_def}");
 
         // id_def is map with keys 'type' and 'value'
         Identifier the_id = Identifier.lookupOrCreateCanonicalIdentifier(id_def.type, id_def.value)
@@ -42,93 +46,97 @@ class TitleLookupService {
         // Add the id.
         result['ids'] << the_id
 
-        // We only treat a component as a match if the matching Identifer
-        // is a class 1 identifier.
-        if (class_one_ids.contains(id_def.type)) {
+        // Flag class one is present.
+        result['class_one'] = true
 
-          // Flag class one is present.
-          result['class_one'] = true
+        // Flag for title match
+        boolean title_match = false
+        
+        // If we find an ID then lookup the components.
+        Set<KBComponent> comp = getComponentsForIdentifier(the_id)
 
-          // Flag for title match
-          boolean title_match = false
-          
-          // If we find an ID then lookup the components.
-          Set<KBComponent> comp = the_id.identifiedComponents
-          comp.each { KBComponent c ->
+        log.debug("Scanning ${comp.size()} components attached to identifier");
+        comp.each { KBComponent c ->
 
-            // Ensure we're not looking at a Hibernate Proxy class representation of the class
-            KBComponent dproxied = ClassUtils.deproxy(c);
+          // Ensure we're not looking at a Hibernate Proxy class representation of the class
+          KBComponent dproxied = ClassUtils.deproxy(c);
 
-            // Only add if it's a title.
-            if ( dproxied instanceof TitleInstance ) {
-              title_match = true
-              TitleInstance the_ti = (dproxied as TitleInstance)
-              // Don't add repeated matches
-              if ( result['matches'].contains(the_ti) ) {
-              }
-              else {
-                result['matches'] << the_ti
-              }
+          // Only add if it's a title.
+          if ( dproxied instanceof TitleInstance ) {
+            title_match = true
+            TitleInstance the_ti = (dproxied as TitleInstance)
+            // Don't add repeated matches
+            if ( result['matches'].contains(the_ti) ) {
+              log.debug("Not adding duplicate");
+            }
+            else {
+              log.debug("Adding ${the_ti} (title_match = ${title_match})");
+              result['matches'] << the_ti
             }
           }
-          
-          // Did the ID yield a Title match?
-          if (!title_match) {
-            
-            log.debug ("No class one ti match.")
-            
-            // We should see if the current ID namespace should be cross checked with another.
-            def other_ns = null
-            for (int i=0; i<xcheck.size() && (!(other_ns)); i++) {
-              Set<String> test = xcheck[i]
-              
-              if (test.contains(id_def.type)) {
-                
-                // Create the set then remove the matched instance to test teh remaining ones.
-                other_ns = new HashSet<String>(test)
-                
-                // Remove the current namespace.
-                other_ns.remove(id_def.type)
-                log.debug ("Cross checking for ${id_def.type} in ${other_ns.join(", ")}")
-                
-                Identifier xc_id = null
-                for (int j=0; j<other_ns.size() && !(xc_id); j++) {
-                  
-                  String ns = other_ns[j]
-                  
-                  IdentifierNamespace namespace = IdentifierNamespace.findByValue(ns)
-                  
-                  if (namespace) {
-                  
-                    // Lookup the identifier namespace.
-                    xc_id = Identifier.findByNamespaceAndValue(namespace, id_def.value)                  
-                    log.debug ("Looking up ${ns}:${id_def.value} returned ${xc_id}.")
-                    
-                    comp = xc_id?.identifiedComponents
-                    
-                    comp?.each { KBComponent c ->
-          
-                      // Ensure we're not looking at a Hibernate Proxy class representation of the class
-                      KBComponent dproxied = ClassUtils.deproxy(c);
-          
-                      // Only add if it's a title.
-                      if ( dproxied instanceof TitleInstance ) {
-                        
-                        log.debug ("Found ${id_def.value} in ${ns} namespace.")
-                        
-                        // Save details here so we can raise a review request, only if a single title was matched.
-                        result['x_check_matches'] << [
-                          "suppliedNS"  : id_def.type,
-                          "foundNS"     : ns
-                        ]
+          else {
+            log.debug("ID Doesn't point at a title, skipping");
+          }
+        }
+        
+        // Did the ID yield a Title match?
+        log.debug("After class one matches (${id_def.type}:${id_def.value}, ${the_id.id}, title_match=${title_match}");
 
-                        TitleInstance the_ti = (dproxied as TitleInstance)
-                        // Don't add repeated matches
-                        if ( result['matches'].contains(the_ti) ) {
-                        }
-                        else {
-                          result['matches'] << the_ti
-                        }
+        if (!title_match) {
+          
+          // We should see if the current ID namespace should be cross checked with another.
+          def other_ns = null
+          for (int i=0; i<xcheck.size() && (!(other_ns)); i++) {
+            Set<String> test = xcheck[i]
+            
+            if (test.contains(id_def.type)) {
+              
+              // Create the set then remove the matched instance to test teh remaining ones.
+              other_ns = new HashSet<String>(test)
+              
+              // Remove the current namespace.
+              other_ns.remove(id_def.type)
+              log.debug ("Cross checking for ${id_def.type} in ${other_ns.join(", ")}")
+              
+              Identifier xc_id = null
+              for (int j=0; j<other_ns.size() && !(xc_id); j++) {
+                
+                String ns = other_ns[j]
+                
+                IdentifierNamespace namespace = IdentifierNamespace.findByValue(ns)
+                
+                if (namespace) {
+                  // Lookup the identifier namespace.
+                  xc_id = Identifier.findByNamespaceAndValue(namespace, id_def.value)                  
+                  log.debug ("Looking up ${ns}:${id_def.value} returned Identifier ${xc_id}");
+                  
+                  comp = xc_id?.identifiedComponents
+                  
+                  comp?.each { KBComponent c ->
+        
+                    // Ensure we're not looking at a Hibernate Proxy class representation of the class
+                    KBComponent dproxied = ClassUtils.deproxy(c);
+        
+                    // Only add if it's a title.
+                    if ( dproxied instanceof TitleInstance ) {
+                      
+                      log.debug ("Found ${id_def.value} in ${ns} namespace.")
+                      
+                      // Save details here so we can raise a review request, only if a single title was matched.
+                      result['x_check_matches'] << [
+                        "suppliedNS"  : id_def.type,
+                        "foundNS"     : ns
+                      ]
+
+                      TitleInstance the_ti = (dproxied as TitleInstance)
+
+                      // Don't add repeated matches
+                      if ( result['matches'].contains(the_ti) ) {
+                        log.debug("Title already in list of matched instances");
+                      }
+                      else {
+                        result['matches'] << the_ti
+                        log.debug("Adding cross check title to matches (Now ${result['matches'].size()} items)");
                       }
                     }
                   }
@@ -138,7 +146,12 @@ class TitleLookupService {
           }
         }
       }
+      else {
+        log.warn("Skipping problem ID ${id_def}");
+      }
     }
+
+    log.debug("At end of class_one_match, result['matches'].size == ${result['matches'].size()}");
 
     result
   }
@@ -290,44 +303,47 @@ class TitleLookupService {
             }
           }
         }
-
         break;
 
       default :
         // Multiple matches.
-        log.debug ("Title class one identifier lookup yielded ${matches.size()} matches. This is a bad match. Ingest should skip this row.")
+        log.debug ("Title class one identifier lookup yielded ${matches.size()} matches - ${matches.collect{it.id}}. This is a bad match. Ingest should skip this row.")
         break;
     }
 
     // If we have a title then lets set the publisher and ids...
     if (the_title) {
 
-      if ( ( the_title.id == null ) || the_title.isDirty() ) {
-        the_title.save(failOnError:true, flush:true);
-      }
-      
-      
+      // Make sure we're all saved before looking up the publisher
+      the_title.save(flush:true, failOnError:true);
+
       // Add the publisher.
       addPublisher(metadata.publisher_name, the_title, user, project)
+
+      the_title.save(flush:true, failOnError:true);
 
       results['ids'].each {
         if ( ! the_title.ids.contains(it) ) {
 
-          // Double check the identifier we are about to add does not already exist in the system
+          log.debug("Titles ${the_title.id} does not already contain identifier ${it.id}. See if adding it would create a conflict, if not, add it");
+
+          // Double check the identifier we are about to add does not already exist attached to another item in the system
           // Combo.Type : KBComponent.Ids
           def id_combo_type = RefdataCategory.lookupOrCreate('Combo.Type', 'KBComponent.Ids')
-          def existing_identifier = Combo.executeQuery("Select c from Combo as c where c.toComponent = ? and c.type = ?",[it,id_combo_type]);
+          def existing_identifier = Combo.executeQuery("Select c.id from Combo as c where c.toComponent.id = ? and c.type.id = ?",[it.id,id_combo_type.id]);
           if ( existing_identifier.size() > 0 ) {
             ReviewRequest.raise(
               the_title,
               "Adding an identifier(${it.id}) to this title would create a duplicate record",
-              "The ingest file suggested an identifier (${it.id}) for a title which conflicts with a record already in the system (${existing_identifier[0].fromComponent.id})",
+              "The ingest file suggested an identifier (${it.id}) for a title which conflicts with a record already in the system (combo ${existing_identifier[0]})",
               user,
               project
             )
           }
           else {
+            log.debug("Adding identifier to title");
             the_title.ids.add(it);
+            the_title.save(flush:true, failOnError:true);
           }
         }
       }
@@ -351,11 +367,13 @@ class TitleLookupService {
   private TitleInstance addPublisher (publisher_name, ti, user = null, project = null) {
 
 
-    if ( ( publisher_name != null ) && ( publisher_name.trim().length() > 0 ) ) {
-      log.debug("Add publisher \"${publisher_name}\"");
+    if ( ( publisher_name != null ) && 
+         ( publisher_name.trim().length() > 0 ) ) {
+
       // Lookup our publisher.
       def norm_pub_name = GOKbTextUtils.normaliseString(publisher_name);
 
+      log.debug("Add publisher \"${publisher_name}\" (${norm_pub_name})");
       Org publisher = Org.findByNormname(norm_pub_name)
 
       if ( publisher == null ) {
@@ -503,10 +521,15 @@ class TitleLookupService {
     def start_time = System.currentTimeMillis();
     
     ids.each { def id_def ->
+
+      log.debug("Consider ${id_def}");
+
       // Class ones only.
       if ( id_def.value && 
            id_def.ns && 
            class_one_ids.contains(id_def.ns) ) {
+
+        log.debug("looking up ${id_def}");
       
         def identifiers = Identifier.createCriteria().list(max: 5) {
           and { 
@@ -518,16 +541,18 @@ class TitleLookupService {
           }
         }
 
+        log.debug("Attempt matchClassOnes on ${id_def}, processing ${identifiers.size()} candidates");
+
         if ( identifiers.size() > 4 ) {
           log.warn("matchClassOne for ${id_def} returned a high number of candidate records. This shouldn't be the case");
         }
         
         // Examine the identified components.
         identifiers?.each {
+          log.debug("Handle ${it?.identifiedComponents.size()} components");
           it?.identifiedComponents.each {
             KBComponent comp = KBComponent.deproxy(it)
             if (comp instanceof TitleInstance) {
-              
               // Add to the set.
               result << (TitleInstance)comp
             }
@@ -546,6 +571,8 @@ class TitleLookupService {
 
   public def matchClassOneComponentIds(def ids) {
     def result = null
+
+    log.debug("matchClassOneComponentIds(${ids})");
 
     try {
       // Get the class 1 identifier namespaces.
@@ -620,14 +647,21 @@ class TitleLookupService {
   // any field that might change the Instance -> Work mapping. We have to wait for that update to
   // complete before processing
   def remapTitleInstance(oid) {
-    log.debug("remapTitleInstance::${oid}");
-    def domain_object = genericOIDService.resolveOID(oid)
-    if ( domain_object ) {
-      log.debug("Calling ${domain_object}.remapWork()");
-      domain_object.remapWork();
+    TitleInstance.withNewTransaction {
+      log.debug("remapTitleInstance::${oid}");
+      def domain_object = genericOIDService.resolveOID(oid)
+      if ( domain_object ) {
+        log.debug("Calling ${domain_object}.remapWork()");
+        domain_object.remapWork();
+      }
+      else {
+        log.debug("Unable tyo locate domain object for ${oid}");
+      }
     }
-    else {
-      log.debug("Unable tyo locate domain object for ${oid}");
-    }
+  }
+
+  def getComponentsForIdentifier(identifier) {
+    // was identifier.identifiedComponents
+    KBComponent.executeQuery('select DISTINCT c.fromComponent from Combo as c where c.toComponent = :id and c.type.value = :tp',[id:identifier,tp:'KBComponent.Ids']);
   }
 }

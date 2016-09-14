@@ -26,6 +26,10 @@ class TitleInstance extends KBComponent {
     "OAStatus"  : "Unknown"
   ]
 
+  static mapping = {
+    // From TitleInstance
+    includes KBComponent.mapping
+  }
 
   // This map is used to convey information about the title in general processing. The initial usecase is so that we can attach
   // information about how this specific title was located, for example, by class 1 identifier match, or some other method
@@ -509,31 +513,34 @@ class TitleInstance extends KBComponent {
   def remapWork() {
     log.debug('remapWork');
     // BKM:TITLE + then FIRSTAUTHOR if duplicates found
-    def nname = GOKbTextUtils.normaliseString(name);
 
-    if ( ( nname ) && 
-         ( nname.length() > 0 ) &&
-         ( ! nname.startsWith('unknown title')) ) {
-      // book bucket (Work) hashes are based on the normalised name.
-      def h = GOKbTextUtils.generateComponentHash([nname]);
+      def nname = GOKbTextUtils.normaliseString(name);
 
-      def bucketMatches = Work.executeQuery('select w from Work as w where w.bucketHash = :h',[h:h]);
+      if ( ( nname ) && 
+           ( nname.length() > 0 ) &&
+           ( ! nname.startsWith('unknown title')) ) {
+        // book bucket (Work) hashes are based on the normalised name.
+        def h = GOKbTextUtils.generateComponentHash([nname]);
 
-      switch( bucketMatches.size() ) {
-        case 0:
-          log.debug("No matches - create work");
-          def w = new Work(name: name).save(flush:true, failOnError:true)
-          this.work = w
-          this.save(flush:true, failOnError:true)
-          break;
-        case 1:
-          log.debug("Good enough unique match on bucketHash");
-          break;
-        default:
-          log.debug("Mached multiple works - use discriminator properties");
-          break;
+        def bucketMatches = Work.executeQuery('select w from Work as w where w.bucketHash = :h',[h:h]);
+
+        switch( bucketMatches.size() ) {
+          case 0:
+            log.debug("No matches - create work");
+            def w = new Work(name: name).save(flush:true, failOnError:true)
+            TitleInstance.executeUpdate('update TitleInstance set work = :w where id = :tid',[w:w, tid:this.id]);
+            // this.work = w
+            // this.save(flush:true, failOnError:true)
+            break;
+          case 1:
+            log.debug("Good enough unique match on bucketHash");
+            TitleInstance.executeUpdate('update TitleInstance set work = :w where id = :tid',[w:bucketMatches[0], tid:this.id]);
+            break;
+          default:
+            log.debug("Mached multiple works - use discriminator properties");
+            break;
+        }
       }
-    }
   }
 
 }
