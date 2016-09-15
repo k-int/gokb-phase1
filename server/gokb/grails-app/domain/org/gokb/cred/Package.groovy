@@ -229,6 +229,8 @@ order by tipp.id""",[this, refdata_package_tipps, refdata_hosted_tipps, refdata_
         'global' ( global?.value )
         'nominalPlatform' ( nominalPlatform?.name )
         'nominalProvider' ( nominalPlatform?.provider?.name )
+        'listVerifier' ( listVerifier?.username )
+        'listVerifierDate' ( listVerifiedDate ? sdf.format(listVerifiedDate) : null )
         'source' {
           'url' (source?.url)
           'defaultAccessURL' (source?.defaultAccessURL)
@@ -241,6 +243,13 @@ order by tipp.id""",[this, refdata_package_tipps, refdata_hosted_tipps, refdata_
           'responsibleParty' (source?.responsibleParty?.name)
         }
         'name' (name)
+        if ( curatoryGroups ) {
+           builder.'curatoryGroups' {
+             curatoryGroups.each { cg ->
+               builder.'curatoryGroup' ( cg.name )
+             }
+           }
+        }
         if ( variantNames ) {
            builder.'variantNames' {
              variantNames.each { vn ->
