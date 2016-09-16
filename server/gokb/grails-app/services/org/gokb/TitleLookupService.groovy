@@ -28,7 +28,8 @@ class TitleLookupService {
       "class_one"         : false,
       "ids"               : [],
       "matches"           : [] as Set,
-      "x_check_matches"   : [] as Set
+      "x_check_matches"   : [] as Set,
+      "other_identifiers" : [] as Set
     ]
 
     // Go through each of the class_one_ids and look for a match.
@@ -148,6 +149,8 @@ class TitleLookupService {
       }
       else {
         log.warn("Skipping problem ID ${id_def}");
+        Identifier the_id = Identifier.lookupOrCreateCanonicalIdentifier(id_def.type, id_def.value)
+        result['other_identifiers'] << the_id
       }
     }
 
@@ -214,22 +217,27 @@ class TitleLookupService {
           def target_hash = null;
 
           // Lookup using title string match only.
-          // the_title = attemptStringMatch (norm_title)
           the_title = attemptBucketMatch (metadata.title)
 
           if (the_title) {
-            log.debug("TI ${the_title} matched by name. Partial match")
+            log.debug("TI ${the_title} matched by bucket.")
 
-            // Add the variant.
-            the_title.addVariantTitle(metadata.title)
+            if ( metadata.title != the_title.name ) {
+              log.debug("bucket match but \"${metadata.title}\" != \"${the_title.name}\" so add as a variant");
 
-            // Raise a review request
-            ReviewRequest.raise(
-                the_title,
-                "'${metadata.title}' added as a variant of '${the_title.name}'.",
-                "No 1st class ID supplied but reasonable match was made on the title name.",
-                user, project
-                )
+              // Add the variant.
+              the_title.addVariantTitle(metadata.title)
+
+              // Raise a review request
+              ReviewRequest.raise(
+                  the_title,
+                  "'${metadata.title}' added as a variant of '${the_title.name}'.",
+                  "No 1st class ID supplied but reasonable match was made on the title name.",
+                  user, project
+                  )
+
+              the_title.save(flush:true, failOnError:true);
+            }
 
           } else {
 
@@ -296,10 +304,8 @@ class TitleLookupService {
               the_title = matches[0]
             }
             else {
-              // Create the normalised title.
-              String norm_title = GOKbTextUtils.generateComparableKey(metadata.title)
               // Now we can examine the text of the title.
-              the_title = singleTIMatch(metadata.title, norm_title, matches[0], user, project)
+              the_title = singleTIMatch(metadata.title,matches[0], user, project)
             }
           }
         }
@@ -322,7 +328,11 @@ class TitleLookupService {
 
       the_title.save(flush:true, failOnError:true);
 
-      results['ids'].each {
+      Set ids_to_add = []
+      ids_to_add.addAll(results['ids'])
+      ids_to_add.addAll(results['other_identifiers'])
+
+      ids_to_add.each {
         if ( ! the_title.ids.contains(it) ) {
 
           log.debug("Titles ${the_title.id} does not already contain identifier ${it.id}. See if adding it would create a conflict, if not, add it");
@@ -339,11 +349,14 @@ class TitleLookupService {
               user,
               project
             )
+            // We have to save the title as this modifies the revreq collections
+            the_title.save(flush:true, failOnError:true);
           }
           else {
             log.debug("Adding identifier to title");
-            the_title.ids.add(it);
-            the_title.save(flush:true, failOnError:true);
+            Combo new_id = new Combo(toComponent:it, fromComponent:the_title, type:id_combo_type).save(flush:true, failOnError:true);
+            // the_title.ids.add(it);
+            // the_title.save(flush:true, failOnError:true);
           }
         }
       }
@@ -371,7 +384,7 @@ class TitleLookupService {
          ( publisher_name.trim().length() > 0 ) ) {
 
       // Lookup our publisher.
-      def norm_pub_name = GOKbTextUtils.normaliseString(publisher_name);
+      def norm_pub_name = GOKbTextUtils.norm2(publisher_name);
 
       log.debug("Add publisher \"${publisher_name}\" (${norm_pub_name})");
       Org publisher = Org.findByNormname(norm_pub_name)
@@ -413,7 +426,8 @@ class TitleLookupService {
   private TitleInstance attemptBucketMatch (String title) {
     def t = null;
     if ( title && ( title.length() > 0 ) ) {
-      def nname = GOKbTextUtils.normaliseString(title);
+      def nname = GOKbTextUtils.norm2(title);
+      
       def bucket_hash = GOKbTextUtils.generateComponentHash([nname]);
 
       // def component_hash = GOKbTextUtils.generateComponentHash([nname, componentDiscriminator]);
@@ -425,46 +439,17 @@ class TitleLookupService {
     return t;
   }
 
-  private TitleInstance attemptStringMatch (String norm_title) {
-
-    // Default to return null.
-    TitleInstance ti = null
-
-    // Try and find a title by matching the norm string.
-    // Default to the min threshold
-    double best_distance = grailsApplication.config.cosine.good_threshold
-    
-    TitleInstance.list().each { TitleInstance t ->
-
-      // Get the distance and then determine whether to add to the list or
-      double distance = GOKbTextUtils.cosineSimilarity(norm_title, GOKbTextUtils.generateComparableKey(t.getName()))
-      if (distance >= best_distance) {
-        ti = t
-        best_distance = distance
-      }
-
-      t.variantNames?.each { vn ->
-        distance = GOKbTextUtils.cosineSimilarity(norm_title, vn.normVariantName)
-        if (distance >= best_distance) {
-          ti = t
-          best_distance = distance
-        }
-      }
-    }
-
-    // Return what we have found... If anything.
-    ti
-  }
-
-  private TitleInstance singleTIMatch(String title, String norm_title, TitleInstance ti, User user, project = null) {
+  private TitleInstance singleTIMatch(String title, TitleInstance ti, User user, project = null) {
 
     log.debug("singleTIMatch");
 
+    String comparable_title = GOKbTextUtils.generateComparableKey(title)
+    
     // The threshold for a good match.
     double threshold = grailsApplication.config.cosine.good_threshold
 
     // Work out the distance between the 2 title strings.
-    double distance = GOKbTextUtils.cosineSimilarity(GOKbTextUtils.generateComparableKey(ti.getName()), norm_title)
+    double distance = GOKbTextUtils.cosineSimilarity(GOKbTextUtils.generateComparableKey(ti.getName()), comparable_title)
 
     // Check the distance.
     switch (distance) {
@@ -477,7 +462,7 @@ class TitleLookupService {
 
       case {
         ti.variantNames.find {alt ->
-          GOKbTextUtils.cosineSimilarity(GOKbTextUtils.generateComparableKey(alt.variantName), norm_title) >= threshold
+          GOKbTextUtils.cosineSimilarity(GOKbTextUtils.generateComparableKey(alt.variantName), comparable_title) >= threshold
         }}:
         // Good match on existing variant titles
         log.debug("Good match for TI on variant.")
@@ -647,16 +632,21 @@ class TitleLookupService {
   // any field that might change the Instance -> Work mapping. We have to wait for that update to
   // complete before processing
   def remapTitleInstance(oid) {
-    TitleInstance.withNewTransaction {
-      log.debug("remapTitleInstance::${oid}");
-      def domain_object = genericOIDService.resolveOID(oid)
-      if ( domain_object ) {
-        log.debug("Calling ${domain_object}.remapWork()");
-        domain_object.remapWork();
+    try {
+      TitleInstance.withNewTransaction {
+        log.debug("remapTitleInstance::${oid}");
+        def domain_object = genericOIDService.resolveOID(oid,true)
+        if ( domain_object ) {
+          log.debug("Calling ${domain_object}.remapWork()");
+          domain_object.remapWork();
+        }
+        else {
+          log.debug("Unable tyo locate domain object for ${oid}");
+        }
       }
-      else {
-        log.debug("Unable tyo locate domain object for ${oid}");
-      }
+    }
+    catch ( Exception e ) {
+      log.error("Problem in remap work.",e);
     }
   }
 

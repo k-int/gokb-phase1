@@ -145,6 +145,33 @@ class TitleLookupServiceSpec extends Specification {
         works.size() == 2
     }
 
+    void "Ensure we can Create a title that has no identifiers"() {
+      def c = new IntegrationController()
+      given: "A Json record representing a instance record (That has no identifiers) that is not yet in the database as an instance (Or work)"
+        def json_record = [
+          'title':'A.A.U.T.A. news bulletin',
+          'identifiers':[],
+          'type':'Serial'
+        ]
+      when: "Caller asks for this record to be cross referenced"
+        c.request.JSON = json_record
+        c.crossReferenceTitle()
+        println(c.response.json)
+        def response = c.response.json
+        // Give the background updates time to complete
+        synchronized(this) {
+          Thread.sleep(4000)
+        }
+      then: "The item is created up as it does not already exist"
+        response.message != null
+        response.message.startsWith('Created')
+      expect: "Find item by normname only returns one item"
+        def normalised_title = GOKbTextUtils.norm2('A.A.U.T.A. news bulletin')
+        normalised_title.equals('aautabulletinnews');
+        def matching_titles = TitleInstance.executeQuery('select t from TitleInstance as t where t.normname = :n',[n:normalised_title]);
+        matching_titles.size() == 1
+    }
+
 
     void "Test Work Mappings for First Edition"() {
       def c = new IntegrationController()
@@ -220,7 +247,8 @@ class TitleLookupServiceSpec extends Specification {
         def json_record = [
           'title':'ACM SIGICE Bulletin',
           'identifiers':[['type':'eissn', value:'1558-1144'],
-                         ['type':'issn', value:'1078-134X']
+                         ['type':'issn', value:'1078-134X'],
+                         ['type':'wibbleNS', value:'Wibble99887766']
                         ],
           'type':'Serial'
         ]
@@ -237,10 +265,38 @@ class TitleLookupServiceSpec extends Specification {
         response.message != null
         response.message.startsWith('Created')
       expect: "Find item by ID still only returns one item"
-        def ids = [ ['ns':'issn', 'value':'1078-134X']  ]
+        def ids = [ ['ns':'issn', 'value':'1078-134X'] ]
         def matching_with_class_one_ids = titleLookupService.matchClassOneComponentIds(ids)
         matching_with_class_one_ids.size() == 1
         matching_with_class_one_ids[0] == response.titleId
+    }
+
+
+    void "Attempt to Add a second title with the same title and no identifiers should upsert the original, not create a new title"() {
+      def c = new IntegrationController()
+      given: "A Json record representing a instance record (That has no identifiers) that is not yet in the database as an instance (Or work)"
+        def json_record = [
+          'title':'A.A.U.T.A. news bulletin',
+          'identifiers':[],
+          'type':'Serial'
+        ]
+      when: "Caller asks for this record to be cross referenced"
+        c.request.JSON = json_record
+        c.crossReferenceTitle()
+        println(c.response.json)
+        def response = c.response.json
+        // Give the background updates time to complete
+        synchronized(this) {
+          Thread.sleep(4000)
+        }
+      then: "The item is created up as it does not already exist"
+        response.message != null
+        response.message.startsWith('Created')
+      expect: "Find item by normname only returns one item"
+        def normalised_title = GOKbTextUtils.norm2('A.A.U.T.A. news bulletin')
+        normalised_title.equals('aautabulletinnews');
+        def matching_titles = TitleInstance.executeQuery('select t from TitleInstance as t where t.normname = :n',[n:normalised_title]);
+        matching_titles.size() == 1
     }
    
 }

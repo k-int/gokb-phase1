@@ -941,6 +941,7 @@ class WorkflowController {
     render view:'platformReplacementResult' , model:[result:result]
   }
 
+  @Secured(['ROLE_USER', 'IS_AUTHENTICATED_FULLY'])
   def download() {
     log.debug("Download ${params}");
 
@@ -1069,6 +1070,7 @@ class WorkflowController {
     redirect(url: result.ref)
   }
 
+  @Secured(['ROLE_USER', 'IS_AUTHENTICATED_FULLY'])
   def createTitleHistoryEvent() {
 
     log.debug("createTitleHistoryEvent")
@@ -1115,6 +1117,7 @@ class WorkflowController {
     redirect(url: result.ref)
   }
 
+  @Secured(['ROLE_USER', 'IS_AUTHENTICATED_FULLY'])
   def deleteTitleHistoryEvent() {
     log.debug(params);
     def result = [:]
@@ -1128,6 +1131,7 @@ class WorkflowController {
 
 
   // @Transactional(readOnly = true)
+  @Secured(['ROLE_USER', 'IS_AUTHENTICATED_FULLY'])
   private def packageKBartExport(packages_to_export) {
     def filename = null;
 
@@ -1248,6 +1252,7 @@ class WorkflowController {
   }
 
 
+  @Secured(['ROLE_USER', 'IS_AUTHENTICATED_FULLY'])
   private def packageTSVExport(packages_to_export) {
     def filename = null;
 
