@@ -90,7 +90,6 @@ class TitleInstance extends KBComponent {
     pureOA (nullable:true, blank:false)
     reasonRetired (nullable:true, blank:false)
     OAStatus (nullable:true, blank:false)
-//    imprint (nullable:true, blank:false)
     publishedFrom (nullable:true, blank:false)
     publishedTo (nullable:true, blank:false)
     coverImage (nullable:true, blank:true)
@@ -254,7 +253,6 @@ class TitleInstance extends KBComponent {
           builder.'continuingSeries' (continuingSeries?.value)
           builder.'publishedFrom' (publishedFrom)
           builder.'publishedTo' (publishedTo)
-          builder.'imprint' (imprint?.name)
           builder.'issuer' (issuer?.name)
 
           builder.'identifiers' {
