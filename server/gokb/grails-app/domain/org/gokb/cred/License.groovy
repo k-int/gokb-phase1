@@ -1,5 +1,8 @@
 package org.gokb.cred
 
+import javax.persistence.Transient
+
+
 class License extends KBComponent {
   String     url
   String    file
