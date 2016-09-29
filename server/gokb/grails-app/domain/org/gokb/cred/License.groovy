@@ -67,7 +67,7 @@ class License extends KBComponent {
 
 
   static def oaiConfig = [
-    id:'License',
+    id:'licenses',
     textDescription:'Office repository for GOKb',
     query:" from License as o where o.status.value != 'Deleted'",
     pageSize:3
@@ -96,7 +96,9 @@ class License extends KBComponent {
       if ( type ) {
         builder.'type' (type.value)
       }
-      builder.'summaryStatement' (summaryStatement)
+      builder.'summaryStatement' {
+        builder.yieldUnescaped "<![CDATA[${summaryStatement}]]>"
+      }
 
       if ( licensor ) {
         builder.'licensor' (licensor.name)
