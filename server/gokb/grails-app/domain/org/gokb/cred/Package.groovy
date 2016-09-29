@@ -244,10 +244,18 @@ order by tipp.id""",[this, refdata_package_tipps, refdata_hosted_tipps, refdata_
           'responsibleParty' (source?.responsibleParty?.name)
         }
         'name' (name)
+          builder.group {
+          }
+        }
+      }
+
         if ( curatoryGroups ) {
            builder.'curatoryGroups' {
              curatoryGroups.each { cg ->
-               builder.'curatoryGroup' ( cg.name )
+               builder.'curatoryGroup' {
+                 builder.owner(cg.owner?.username)
+                 builder.name(cg.name)
+               }
              }
            }
         }

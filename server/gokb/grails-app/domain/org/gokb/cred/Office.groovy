@@ -118,7 +118,7 @@ class Office extends KBComponent {
       builder.curatoryGroups {
         curatoryGroups.each { cg ->
           builder.group {
-            builder.owner(cg.owner.username)
+            builder.owner(cg.owner?.username)
             builder.name(cg.name)
           }
         }

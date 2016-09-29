@@ -349,7 +349,7 @@ class OaiController {
 
       query += ' order by o.lastUpdated'
 
-      log.debug("prefix handler for ${metadataPrefix} is ${prefixHandler}");
+      log.debug("prefix handler for ${metadataPrefix} is ${prefixHandler}, query is ${query}, params: ${query_params}");
       def rec_count = Package.executeQuery("select count(o) ${query}",query_params)[0];
       def records = Package.executeQuery("select o ${query}",query_params,[offset:offset,max:max])
 
