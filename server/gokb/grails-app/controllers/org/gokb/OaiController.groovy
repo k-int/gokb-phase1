@@ -76,23 +76,29 @@ class OaiController {
   }
 
   private def buildMetadata (subject, builder, result, prefix, config) {
-    log.debug("buildMetadata....");
-    
-    // def attr = ["xsi:schemaLocation" : "${config.schema}"]
-    def attr = [:]
-    config.metadataNamespaces.each {ns, url ->
-      ns = (ns == '_default_' ? '' : ":${ns}")
+    log.debug("buildMetadata....${subject}");
+    try {
+      // def attr = ["xsi:schemaLocation" : "${config.schema}"]
+      def attr = [:]
+      config.metadataNamespaces.each {ns, url ->
+        ns = (ns == '_default_' ? '' : ":${ns}")
       
-      attr["xmlns${ns}"] = url 
-    }
+        attr["xmlns${ns}"] = url 
+      }
 
-    log.debug("proceed...");
+      log.debug("proceed...");
     
-    // Add the metadata element and populate it depending on the config.
-    builder.'metadata'() {
-      subject."${config.methodName}" (builder, attr)
+      // Add the metadata element and populate it depending on the config.
+      builder.'metadata'() {
+        subject."${config.methodName}" (builder, attr)
+      }
     }
-    log.debug("buildMetadata.... done");
+    catch ( Exception e ) {
+      log.error("Problem constructing metadata",e);
+    }
+    finally {
+      log.debug("buildMetadata.... done");
+    }
   }
 
   def getRecord(result) {
