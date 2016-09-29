@@ -80,6 +80,7 @@ class Source extends KBComponent {
     def sdf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
     builder.'gokb' (attr) {
       builder.'name' (name)
+      builder.'shortcode' (shortcode)
       builder.'editStatus' (editStatus?.value)
       builder.'url' (url)
       builder.'defaultAccessURL' (defaultAccessURL)
