@@ -213,7 +213,7 @@ class TitleInstance extends KBComponent {
     id:'titles',
     textDescription:'Title repository for GOKb',
     query:" from TitleInstance as o where o.status.value != 'Deleted'",
-    pageSize:20
+    pageSize:10
   ]
 
   /**
