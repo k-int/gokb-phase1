@@ -259,7 +259,7 @@ kbart2.mappings= [
      ],
      'wiley-blackwell-kbart':[
               quoteChar:'\0',  // No quote char - some springer rows start with " for unknown reasons - CRITICALLY IMPORTANT!
-              // separator:',',
+              // separator:',', // tab is the default
               charset:'UTF-8',
               defaultTypeName:'org.gokb.cred.BookInstance',
               identifierMap:[ 'print_identifier':'isbn', 'online_identifier':'isbn' ],
@@ -1707,6 +1707,7 @@ globalSearchTemplates = [
       ],
       qbeResults:[
         [heading:'Title', property:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'],sort:'name' ],
+        [heading:'Bucket Hash', property:'bucketHash'],
         [heading:'Status', property:'status.value',sort:'status'],
       ]
     ]
@@ -1793,6 +1794,7 @@ globalDisplayTemplates = [
   'org.gokb.cred.Person': [ type:'staticgsp', rendername:'person' ],
   'org.gokb.cred.UserOrganisation': [ type:'staticgsp', rendername:'user_org' ],
   'org.gokb.cred.Folder': [ type:'staticgsp', rendername:'folder' ],
+  'org.gokb.cred.Work': [ type:'staticgsp', rendername:'work' ],
 ]
 
 permNames = [

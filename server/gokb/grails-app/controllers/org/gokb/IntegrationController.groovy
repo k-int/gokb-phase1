@@ -220,6 +220,15 @@ class IntegrationController {
           return
         }
         
+        if ( request.JSON.mission ) {
+          log.debug("Mission ${request.JSON.mission}");
+          located_or_new_org.mission = RefdataCategory.lookupOrCreate('Org.Mission','request.JSON.mission');
+        }
+
+        if ( request.JSON.homepage ) {
+          located_or_new_org.homepage = request.JSON.homepage
+        }
+
         // Add parent.
         if (request.JSON.parent) {
           def parentDef = request.JSON.parent;
@@ -236,7 +245,7 @@ class IntegrationController {
         request.JSON.customIdentifers.each { ci ->
           def canonical_identifier = Identifier.lookupOrCreateCanonicalIdentifier(ci.identifierType,ci.identifierValue)
           log.debug("adding identifier(${ci.identifierType},${ci.identifierValue})(${canonical_identifier.id})");
-      located_or_new_org.ids.add(canonical_identifier)
+          located_or_new_org.ids.add(canonical_identifier)
         }
     
         // roles
@@ -244,9 +253,7 @@ class IntegrationController {
         request.JSON.roles.each { r ->
           log.debug("Adding role ${r}");
           def role = RefdataCategory.lookupOrCreate("Org.Role", r)
-          located_or_new_org.addToRoles(
-      role
-          )
+          located_or_new_org.addToRoles(role)
         }
 
         // flags
@@ -308,6 +315,51 @@ class IntegrationController {
       result.status=false
     }
     render result as JSON
+  }
+
+  /**
+   *
+   *  assertSource()
+   *  allow an authorized external component to send in a JSON structure following this template:
+   *      [
+   *         name:'',
+   *         shortcode:'',
+   *         editStatus:'',
+   *         url:'',
+   *         defaultAccessURL:'',
+   *         explanationAtSource:'',
+   *         contextualNotes:'',
+   *         frequency:'',
+   *         ruleset:'',
+   *         defaultSupplyMethod:'',
+   *         defaultDataFormat:''
+   *      ]
+   */
+  @Secured(['ROLE_API', 'IS_AUTHENTICATED_FULLY'])
+  def assertSource() { 
+    log.debug("assertSource, request.json = ${request.JSON}");
+    def result=[:]
+    result.status = true;
+
+    try {
+      if ( request.JSON.name ) {
+        def located_or_new_source = Source.findByName(request.JSON.name) ?: new Source(name:request.JSON.name)
+        // changed |= setRefdataIfPresent(request.JSON.authentication, p, 'authentication', 'Platform.AuthMethod')
+        setIfPresent(located_or_new_source,'url',request.JSON.url);
+        setIfPresent(located_or_new_source,'defaultAccessURL',request.JSON.defaultAccessURL);
+        setIfPresent(located_or_new_source,'explanationAtSource',request.JSON.explanationAtSource);
+        setIfPresent(located_or_new_source,'contextualNotes',request.JSON.contextualNotes);
+        setIfPresent(located_or_new_source,'frequency',request.JSON.frequency);
+        setIfPresent(located_or_new_source,'ruleset',request.JSON.ruleset);
+        setRefdataIfPresent(request.JSON.defaultSupplyMethod, located_or_new_source, 'defaultSupplyMethod', 'Source.DataSupplyMethod')
+        setRefdataIfPresent(request.JSON.defaultDataFormat, located_or_new_source, 'defaultDataFormat', 'Source.DataFormat')
+        located_or_new_source.save(flush:true, failOnError:true);
+      }
+    }
+    catch ( Exception e ) {
+      e.printStackTrace()
+    }
+
   }
 
 
@@ -792,4 +844,11 @@ class IntegrationController {
 
     result
   }
+
+  private def setIfPresent(obj,prop,proposed_value) {
+    if ( ( proposed_value ) && ( proposed_value.toString().trim().length() > 0 ) ) {
+      obj[prop]=proposed_value;
+    }
+  }
+
 }

@@ -65,6 +65,10 @@ class TSVIngestionService {
     new SimpleDateFormat('yyyy')
   ];
 
+  // Don't update the accessStartDate if we are seeing the tipp again in a file
+  // already loaded.
+  def tipp_properties_to_ignore_when_updating = [ 'accessStartDate' ]
+
 
 
   /* This class is a BIG rip off of the TitleLookupService, it really should be
@@ -185,13 +189,11 @@ class TSVIngestionService {
                            def project = null) {
     // The TitleInstance
     TitleInstance the_title = null
-    // log.debug("lookup or create title :: ${title}(${ingest_cfg})")
 
-    if (title == null) return null
+    if ((title == null)||(title.trim().length()==0)) return null
 
     // Create the normalised title.
-    // String norm_title = GOKbTextUtils.generateComparableKey(title)
-    String norm_title = GOKbTextUtils.normaliseString(title)
+    String norm_title = KBComponent.generateNormname(title) ?: title
 
     if ( ( norm_title == null )  || ( norm_title.length() == 0 ) ) {
       throw new RuntimeException("Null normalsed title based on title ${title}, Identifiers ${identifiers}");
@@ -210,13 +212,13 @@ class TSVIngestionService {
       // No match behaviour.
       // Check for presence of class one ID
       if (results['class_one']) {
-        log.debug ("One or more class 1 IDs supplied so must be a new TI. Create instance of ${ingest_cfg.defaultTypeName}")
         // Create the new TI.
         // the_title = new BookInstance(name:title)
         log.debug("Creating new ${row_specific_config.defaultTypeName} and setting title to ${title}. identifiers: ${identifiers}, ${row_specific_config}");
 
         the_title = new_inst_clazz.newInstance()
         the_title.name=title
+        the_title.normname=norm_title
         the_title.ids=[]
       } else {
         // No class 1s supplied we should try and find a match on the title string.
@@ -224,11 +226,6 @@ class TSVIngestionService {
         // Lookup using title string match only.
 
         the_title == new_inst_clazz.findByNormname(norm_title)
-
-        if ( ( the_title == null ) && ( ingest_cfg.doDistanceMatch == true ) ) {
-          // log.debug("No title match on identifier or normname -- try string match");
-          the_title = attemptStringMatch (norm_title)
-        }
 
         if (the_title) {
           // log.debug("TI ${the_title} matched by name. Partial match")
@@ -243,7 +240,6 @@ class TSVIngestionService {
             )
         } else {
           // log.debug("No TI could be matched by name. New TI, flag for review.")
-          // log.debug("Creating new ${ingest_cfg.defaultType} and setting title to ${title}. identifiers: ${identifiers}, ${row_specific_config}");
           // Could not match on title either.
           // Create a new TI but attach a Review request to it.
           the_title = new_inst_clazz.newInstance()
@@ -306,15 +302,21 @@ class TSVIngestionService {
 
     // If we have a title then lets set the publisher and ids...
     if (the_title) {
+      log.debug("Got title - merge any other properties");
 
       results['ids'].each {
         if ( ! the_title.ids.contains(it) ) {
           // We should **NOT** do this in the case where we are creating a new title because the publisher listed a title
           // in the title history group using an identifier in that group.
+          log.debug("Adding id ${it}");
           the_title.ids.add(it);
+        }
+        else {
+          log.debug("Title already contains ${it}");
         }
       }
 
+      log.debug("Saving title");
       // Try and save the result now.
       if ( the_title.save(failOnError:true, flush:true) ) {
         // log.debug("Succesfully saved TI: ${the_title.name} ${the_title.id} (This may not change the db)")
@@ -335,13 +337,13 @@ class TSVIngestionService {
   def TitleInstance addPerson (person_name, role, ti, user=null, project = null) {
     if ( (person_name) && ( person_name.trim().length() > 0 ) ) {
 
-      def norm_person_name = GOKbTextUtils.normaliseString(person_name)
+      def norm_person_name = KBComponent.generateNormname(person_name)
       def person = org.gokb.cred.Person.findAllByNormname(norm_person_name)
       // log.debug("this was found for person: ${person}");
       switch(person.size()) {
         case 0:
           // log.debug("Person lookup yielded no matches.")
-          def the_person = new Person(name:person_name)
+          def the_person = new Person(name:person_name, normname:norm_person_name)
             if (the_person.save(failOnError:true, flush:true)) {
             // log.debug("saved ${the_person.name}")
             person << the_person
@@ -402,12 +404,12 @@ class TSVIngestionService {
     if (the_subjects) {
       for (the_subject in the_subjects) {
 
-        def norm_subj_name = GOKbTextUtils.normaliseString(the_subject)
+        def norm_subj_name = KBComponent.generateNormname(the_subject)
         def subject = Subject.findAllByNormname(norm_subj_name) //no alt names for subjects
         // log.debug("this was found for subject: ${subject}")
         if (!subject) {
           // log.debug("subject not found, creating a new one")
-          subject = new Subject(name:the_subject)
+          subject = new Subject(name:the_subject, normname:norm_subj_name)
           subject.save(failOnError:true, flush:true)
         }
         boolean done=false
@@ -428,20 +430,19 @@ class TSVIngestionService {
 
   def TitleInstance addPublisher (publisher_name, ti, user = null, project = null) {
 
-    def clean_pub_name  = publisher_name?.replaceAll('"','').replaceAll('\'','');
+    if ( ( publisher_name != null ) && ( publisher_name.trim().length() > 0 ) ) {
 
-    if ( ( clean_pub_name != null ) && ( clean_pub_name.trim().length() > 0 ) ) {
+      def norm_pub_name = KBComponent.generateNormname(publisher_name)
 
-      def norm_pub_name = GOKbTextUtils.normaliseString(clean_pub_name)
-      // log.debug("Org lookup: ${clean_pub_name}/${norm_pub_name}");
+      log.debug("Org lookup: ${publisher_name}/${norm_pub_name}");
       def publisher = org.gokb.cred.Org.findAllByNormname(norm_pub_name)
       // log.debug("this was found for publisher: ${publisher}");
       // Found a publisher.
       switch (publisher.size()) {
         case 0:
-          // log.debug ("Publisher ${clean_pub_name} lookup yielded no matches.")
+          log.debug ("Publisher ${publisher_name} lookup yielded no matches via norm search for ${norm_pub_name}.")
           Org.withTransaction {
-            def the_publisher = new Org(name:clean_pub_name,normname:norm_pub_name)
+            def the_publisher = new Org(name:publisher_name, normname:norm_pub_name)
             if (the_publisher.save(failOnError:true, flush:true)) {
               // log.debug("saved ${the_publisher.name}")
               ReviewRequest.raise(
@@ -489,40 +490,6 @@ class TSVIngestionService {
     ti
   }
 
-  private TitleInstance attemptStringMatch (String norm_title) {
-
-    // Default to return null.
-    TitleInstance ti = null
-
-    // Try and find a title by matching the norm string.
-    // Default to the min threshold
-    double best_distance = grailsApplication.config.cosine.good_threshold
-
-    // This isn't a good idea -- 1. Loading whole title records in causes loads of memory churn, and list() loads everything into an ArrayList rather than paging
-    // Needs to be a query selecting titles and variant names and then to paginate over them. For now, just not calling this method and using a flag doDistanceMatch in config
-    TitleInstance.list().each { TitleInstance t ->
-
-    // Get the distance and then determine whether to add to the list or
-    // double distance = GOKbTextUtils.cosineSimilarity(norm_title, GOKbTextUtils.generateComparableKey(t.getName()))
-    double distance = GOKbTextUtils.cosineSimilarity(norm_title, GOKbTextUtils.normaliseString(t.getName()))
-    if (distance >= best_distance) {
-      ti = t
-      best_distance = distance
-    }
-
-    t.variantNames?.each { vn ->
-      distance = GOKbTextUtils.cosineSimilarity(norm_title, vn.normVariantName)
-      if (distance >= best_distance) {
-      ti = t
-      best_distance = distance
-      }
-    }
-    }
-
-    // Return what we have found... If anything.
-    ti
-  }
-
   /*
    *  Given 2 title strings, see if they might be the same. Used to detect title variants.
    */
@@ -535,8 +502,6 @@ class TSVIngestionService {
                                       identifiers,
                                       row_specific_config) {
 
-
-
     // The threshold for a good match.
     double threshold = grailsApplication.config.cosine.good_threshold
 
@@ -548,28 +513,28 @@ class TSVIngestionService {
       distance  = 1
     }
     else {
-      // Otherwise -- work out if they are roughly close enough to warrant a good match
-      log.debug("Comparing ${ti.getName()} and ${norm_title}");
-      def normalised_new_title = GOKbTextUtils.normaliseString(ti.getName())
-      log.debug("Norm version of new title is ${normalised_new_title}");
-      distance = GOKbTextUtils.cosineSimilarity(normalised_new_title, norm_title) ?: 0
-      log.debug("Distance is ${distance}");
+      // Otherwise -- work out if they are roughly close enough to warrant a good matcg
+      // log.debug("Comparing ${ti.getName()} and ${norm_title}");
+      distance = GOKbTextUtils.cosineSimilarity(KBComponent.generateNormname(ti.getName()), norm_title) ?: 0
     }
 
     // Check the distance.
 
     def result = ti;
 
+    log.debug("distance: ${distance} (threshold) ${threshold}");
+
     switch (distance) {
       case 1 :
         // Do nothing just continue using the TI.
-        // log.debug("Exact distance match for TI.")
+        log.debug("Exact distance match for TI.")
         break
 
+      // Try for exact match on variant name
       case {
         ti.variantNames.find {alt ->
-          // log.debug("Comparing ${alt.variantName} and ${norm_title}");
-          GOKbTextUtils.cosineSimilarity(GOKbTextUtils.normaliseString(alt.variantName), norm_title) >= threshold
+          log.debug("Comparing ${alt.variantName} and ${norm_title}");
+          GOKbTextUtils.cosineSimilarity(KBComponent.generateNormname(alt.variantName), norm_title) >= threshold
         }}:
         // Good match on existing variant titles
         log.debug("Good match for TI on existing variant. (distance ${distance} >= threshold ${threshold})")
@@ -858,19 +823,20 @@ class TSVIngestionService {
 
 
         Package.withNewTransaction {
-          def update_agent = User.findByUsername('ingestAgent')
-          // insertBenchmark updateBenchmark
-          Package.executeUpdate('update Package p set p.insertBenchmark=:elapsed where p.id=:pid AND p.insertBenchmark is null',
-                            [pid:the_package_id,elapsed:processing_elapsed]);
-
-          if ( update_agent ) {
-            Package.executeUpdate('update Package p set p.lastUpdateComment=:uc, p.lastUpdatedBy=:updateAgent, p.updateBenchmark=:elapsed where p.id=:pid',
-                            [uc:"Direct ingest of file:${datafile?.name}[${datafile?.id}] completed in ${processing_elapsed}ms, avg per row=${average_milliseconds_per_row}, avg per hour=${average_per_hour}", 
-                             pid:the_package_id, 
-                             updateAgent:update_agent, 
-                             elapsed:processing_elapsed]);
+          try {
+            def update_agent = User.findByUsername('IngestAgent')
+            // insertBenchmark updateBenchmark
+            def p = Package.lock(the_package_id)
+            if ( p.insertBenchmark == null ) 
+              p.insertBenchmark=processing_elapsed;
+            p.lastUpdateComment="Direct ingest of file:${datafile.name}[${datafile.id}] completed in ${processing_elapsed}ms, avg per row=${average_milliseconds_per_row}, avg per hour=${average_per_hour}"
+            p.lastUpdatedBy=update_agent
+            p.updateBenchmark=processing_elapsed
+            p.save(flush:true, failOnError:true)
           }
- 
+          catch ( Exception e ) {
+            log.warn("Problem updating package stats",e);
+          }
         }
       }
       else {
@@ -1001,30 +967,56 @@ class TSVIngestionService {
         }
 
         if ( identifiers.size() > 0 ) {
+
           def title = lookupOrCreateTitle(the_kbart.publication_title, identifiers, ingest_cfg, row_specific_config)
+          // should be def title = titleLookupService.find([title:the_kbart.publication_title, 
+          //                                                identifiers:identifiers,
+          //                                                publisher_name:the_kbart.publisher_name],
+          //                                                null/*user*/, null/*project*/, row_specific_config.defaultTypeName)
+
+
           if ( title ) {
-            title.source=source
-          // log.debug("title found: for ${the_kbart.publication_title}:${title}")
 
-          if (title) {
-            addOtherFieldsToTitle(title, the_kbart, ingest_cfg)
+            log.debug("title found: for ${the_kbart.publication_title}:${title}")
 
-              if ( the_kbart.publisher_name && the_kbart.publisher_name.length() > 0 )
+            if (title) {
+
+              // The title.save s are necessary as adding to the combos collection dirties the title object
+              // These should be rewritten to manually create combo objects instead.
+
+              log.debug("addOtherFieldsToTitle");
+              addOtherFieldsToTitle(title, the_kbart, ingest_cfg)
+              title.save(flush:true, failOnError:true);
+
+              log.debug("Adding publisher");
+              if ( the_kbart.publisher_name && the_kbart.publisher_name.length() > 0 ) {
                 addPublisher(the_kbart.publisher_name, title)
-
-              
-              if ( the_kbart.first_author && the_kbart.first_author.trim().length() > 0 )
-                addPerson(the_kbart.first_author, author_role, title);
-
-              if ( the_kbart.first_editor && the_kbart.first_author.trim().length() > 0 )
-                addPerson(the_kbart.first_editor, editor_role, title);
-
-              addSubjects(the_kbart.subjects, title)
-
-              the_kbart.additional_authors.each { author ->
-                addPerson(author, author_role, title)
+                title.save(flush:true, failOnError:true);
               }
 
+              log.debug("Adding first author");
+              if ( the_kbart.first_author && the_kbart.first_author.trim().length() > 0 ) {
+                addPerson(the_kbart.first_author, author_role, title);
+                title.save(flush:true, failOnError:true);
+              }
+
+              log.debug("Adding Person");
+              if ( the_kbart.first_editor && the_kbart.first_author.trim().length() > 0 ) {
+                addPerson(the_kbart.first_editor, editor_role, title);
+                title.save(flush:true, failOnError:true);
+              }
+
+              log.debug("Adding subjects");
+              addSubjects(the_kbart.subjects, title)
+	      title.save(flush:true, failOnError:true);
+
+              log.debug("Adding additional authors");
+              the_kbart.additional_authors.each { author ->
+                addPerson(author, author_role, title)
+                title.save(flush:true, failOnError:true);
+              }
+
+              title.source=source
               title.save(flush:true, failOnError:true);
 
               def pre_create_tipp_time = System.currentTimeMillis();
@@ -1035,6 +1027,7 @@ class TSVIngestionService {
                                platform,
                                ingest_date,
                                ingest_systime)
+
             } else {
                log.warn("problem getting the title...")
             }
@@ -1178,7 +1171,7 @@ class TSVIngestionService {
                        ingest_date,
                        ingest_systime) {
 
-    // log.debug("TSVIngestionService::createTIPP with pkg:${the_package}, ti:${the_title}, plat:${the_platform}, date:${ingest_date}")
+    log.debug("TSVIngestionService::manualCreateTIPP with pkg:${the_package}, ti:${the_title}, plat:${the_platform}, date:${ingest_date}")
 
     assert the_package != null && the_title != null && the_platform != null
 
@@ -1199,7 +1192,7 @@ class TSVIngestionService {
 
     def tipp = null;
 
-    log.debug("Lookup existing");
+    log.debug("Lookup existing TIPP");
     def tipps = TitleInstance.executeQuery('select tipp from TitleInstancePackagePlatform as tipp, Combo as pkg_combo, Combo as title_combo, Combo as platform_combo  '+
                                            'where pkg_combo.toComponent=tipp and pkg_combo.fromComponent.id=? '+
                                            'and platform_combo.toComponent=tipp and platform_combo.fromComponent.id = ? '+
@@ -1208,6 +1201,9 @@ class TSVIngestionService {
     if ( tipps.size() == 1 ) {
       log.debug("found");
       tipp = tipps[0]
+    }
+    else {
+      log.debug("tipp lookup found ${tipps.size()} entries");
     }
 
 
@@ -1254,15 +1250,22 @@ class TSVIngestionService {
       
 
     } else {
-      // log.debug("found a tipp to use")
+      log.debug("found a tipp to update")
 
       // Set all properties on the object.
       tipp_values.each { prop, value ->
         // Only update if we actually have a change to make
-        if ( tipp."${prop}" != value ) {
-          // Only set the property if we have a value.
-          if (value != null && value != "") {
-            tipp."${prop}" = value
+
+        // WE SHOULD NOT UPDATE ANY ACCESS_FROM_DATE - as we are seeing the tipp in the file again
+        // Previous functions will add the access from date as today. We need to ignore it.
+        if ( tipp_properties_to_ignore_when_updating.contains(prop) ) {
+        }
+        else {
+          if ( tipp."${prop}" != value ) {
+            // Only set the property if we have a value.
+            if (value != null && value != "") {
+              tipp."${prop}" = value
+            }
           }
         }
       }
@@ -1286,7 +1289,7 @@ class TSVIngestionService {
   //for this v1, I've made this very simple - probably too simple.
   def handlePackage(packageName, source, providerName) {
     def result;
-    def norm_pkg_name = GOKbTextUtils.normaliseString(packageName)
+    def norm_pkg_name = KBComponent.generateNormname(packageName)
     // def packages=Package.findAllByNormname(norm_pkg_name);
     def packages=Package.executeQuery("select p from Package as p where p.normname=?",[norm_pkg_name],[readonly:false])
     switch (packages.size()) {
@@ -1296,15 +1299,15 @@ class TSVIngestionService {
 
         def newpkgid = null;
 
-        def newpkg = new Package(name:packageName, source:source)
+        def newpkg = new Package(name:packageName, normname:norm_pkg_name, source:source)
         if (newpkg.save(flush:true, failOnError:true)) {
           newpkgid = newpkg.id
           if ( providerName && providerName.length() > 0 ) {
-            def norm_provider_name = GOKbTextUtils.normaliseString(providerName)
+            def norm_provider_name = KBComponent.generateNormname(providerName)
             def provider = null;
             def providers = org.gokb.cred.Org.findAllByNormname(norm_provider_name)
             if ( providers.size() == 0 )
-              provider = new Org(name:providerName,normname:norm_provider_name).save(flush:true, failOnError:true);
+              provider = new Org(name:providerName, normname:norm_provider_name).save(flush:true, failOnError:true);
             else if ( providers.size() == 1 ) 
               provider = providers[0]
             else
@@ -1405,7 +1408,6 @@ class TSVIngestionService {
     //results=ctb.parse(hcnms, csv)
     //quick check that results aren't null...
 
-
     Map col_positions=[:]
     String[] header = csv.readNext()
     int ctr = 0
@@ -1485,10 +1487,25 @@ class TSVIngestionService {
       log.debug("Got config ${kbart_cfg}");
     }
 
+    org.apache.commons.io.input.BOMInputStream b = new org.apache.commons.io.input.BOMInputStream( new ByteArrayInputStream(data_file.fileData),
+                                                                                                   ByteOrderMark.UTF_16LE, ByteOrderMark.UTF_16BE, ByteOrderMark.UTF_32LE, ByteOrderMark.UTF_32BE,ByteOrderMark.UTF_8)
+
+    def ingest_charset = kbart_cfg.charset?:'ISO-8859-1'
+
+    if (b.hasBOM() == false) {
+      // No BOM found
+    } else if (b.hasBOM(ByteOrderMark.UTF_16LE)) {
+      // has a UTF-16LE BOM
+      ingest_charset = 'UTF-16LE'
+    } else if (b.hasBOM(ByteOrderMark.UTF_16BE)) {
+      // has a UTF-16BE BOM
+      ingest_charset = 'UTF-16BE'
+    }
+
+    log.debug("Convert to kbart2 using charset ${ingest_charset}");
+
     CSVReader csv = new CSVReader(
-                      new InputStreamReader(
-                        new org.apache.commons.io.input.BOMInputStream( new ByteArrayInputStream(data_file.fileData)), 
-                        java.nio.charset.Charset.forName(kbart_cfg.charset?:'ISO-8859-1')),
+                      new InputStreamReader( b, java.nio.charset.Charset.forName(ingest_charset)),
                       (kbart_cfg.separator?:'\t') as char,
                       (kbart_cfg.quoteChar?:'\0') as char)
 
@@ -1583,8 +1600,9 @@ class TSVIngestionService {
         }
       }
 
+      
       unmapped_cols.each { unmapped_col_idx ->
-        if ( nl.size() < unmapped_col_idx ) {
+        if ( ( nl.size() < unmapped_col_idx ) && ( header.size() < unmapped_col_idx ) ) {
           log.debug("Setting unmapped column idx ${unmapped_col_idx} ${header[unmapped_col_idx]} to ${nl[unmapped_col_idx]}");
           result.unmapped.add([header[unmapped_col_idx], nl[unmapped_col_idx]]);
         }

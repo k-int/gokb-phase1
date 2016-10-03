@@ -15,6 +15,9 @@ class User extends Party {
   transient springSecurityService
   transient grailsApplication
 
+  // Used in user import to bypass password encoding - used to directly load hashes instead of password
+  transient direct_password = false
+
   String username
   String password
   String email
@@ -25,7 +28,13 @@ class User extends Party {
   Long defaultPageSize = new Long(10)
   Org org
 
+  // When did the alerting system last check things on behalf of this user
+  Date last_alert_check
 
+  // seconds user wants between checks - System only checks daily, so values < 24*60*60 don't make much sense at the moment
+  Long alert_check_frequency
+
+  RefdataValue send_alert_emails
   RefdataValue showQuickView
   RefdataValue showInfoIcon
     
@@ -44,6 +53,9 @@ class User extends Party {
     defaultPageSize blank: true, nullable:true
     curatoryGroups blank: true, nullable:true
     org blank: false, nullable:true
+    last_alert_check blank: false, nullable:true
+    alert_check_frequency blank: false, nullable:true
+    send_alert_emails blank: false, nullable:true
   }
 
   static mapping = {
@@ -104,7 +116,13 @@ class User extends Party {
   } 
 
   def beforeInsert() {
-    encodePassword()
+
+    if ( direct_password ) {
+    }
+    else {
+      encodePassword()
+    }
+
     if ( displayName == null )
       displayName = username
   }
@@ -208,4 +226,41 @@ class User extends Party {
     return "User";
   }
 
+
+  transient static def tsv_dataload_config = [
+    header:[
+      defaultTargetClass:'org.gokb.cred.User',
+
+      // Identify the different combinations that can be used to identify domain objects for the current row
+      // Names columns in the import sheet - importer will map according to config and do the right thing
+      targetObjectIdentificationHeuristics:[
+      ],
+
+      // Determine what this row can create (Referenced objects hanging off the primary User
+      creationRules : [
+        [
+          whenPresent:[ [ type:'val', colname:'username', errorOnMissing:true] ],
+          ref:'MainUserItem',
+          cls:'org.gokb.cred.User',
+          creation : [ 
+            properties:[
+              [ type:'val', property:'username', colname:'username' ],
+              [ type:'val', property:'password', colname:'password' ],
+              [ type:'val', property:'email', colname:'email' ],
+              [ type:'val', property:'displayName', colname:'display_name' ],
+              [ type:'valueClosure', property:'direct_password', closure: {  colmap, nl, locatedObjects -> true } ],
+            ]
+          ]
+        ]
+      ],
+
+      cols: [
+        [colname:'username', desc:''],
+        [colname:'password', desc:''],
+        [colname:'email', desc:''],
+        [colname:'display_name', desc:''],
+      ]
+    ]
+  ]
+  
 }

@@ -147,9 +147,8 @@ class BootStrap {
       KBComponent.executeQuery("select kbc.id from KBComponent as kbc where kbc.normname is null and kbc.name is not null").each { kbc_id ->
         KBComponent.withNewTransaction {
           KBComponent kbc = KBComponent.get(kbc_id)
-          log.debug("Repair component with no normalised name.. ${kbc.id} ${kbc.name}");
+          log.debug("Repair component with no normalised name.. ${kbc.class.name} ${kbc.id} ${kbc.name}");
           kbc.generateNormname()
-          // kbc.normname = GOKbTextUtils.normaliseString(kbc.name)
           kbc.save();
           kbc.discard()
           ctr++
@@ -365,10 +364,10 @@ class BootStrap {
 
 
   def refdataCats() {
-    RefdataCategory.lookupOrCreate(KBComponent.RD_STATUS, KBComponent.STATUS_CURRENT).save()
-    RefdataCategory.lookupOrCreate(KBComponent.RD_STATUS, KBComponent.STATUS_DELETED).save()
-    RefdataCategory.lookupOrCreate(KBComponent.RD_STATUS, KBComponent.STATUS_EXPECTED).save()
-    RefdataCategory.lookupOrCreate(KBComponent.RD_STATUS, KBComponent.STATUS_RETIRED).save()
+    RefdataCategory.lookupOrCreate(KBComponent.RD_STATUS, KBComponent.STATUS_CURRENT, '0').save()
+    RefdataCategory.lookupOrCreate(KBComponent.RD_STATUS, KBComponent.STATUS_DELETED, '3').save()
+    RefdataCategory.lookupOrCreate(KBComponent.RD_STATUS, KBComponent.STATUS_EXPECTED, '1').save()
+    RefdataCategory.lookupOrCreate(KBComponent.RD_STATUS, KBComponent.STATUS_RETIRED, '2').save()
 
     RefdataCategory.lookupOrCreate(KBComponent.RD_EDIT_STATUS, KBComponent.EDIT_STATUS_APPROVED).save()
     RefdataCategory.lookupOrCreate(KBComponent.RD_EDIT_STATUS, KBComponent.EDIT_STATUS_IN_PROGRESS).save()
