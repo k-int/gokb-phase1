@@ -859,11 +859,10 @@ class IntegrationController {
    *  chunks of inseperable data
    */
   @Secured(['ROLE_API', 'IS_AUTHENTICATED_FULLY'])
-  def loadCatalgRecord() {
+  def loadCatalogRecord() {
     def result = [:]
-    def catalog_file = request.getFile("titleFile")?.inputStream
     try {
-      kabalogService.loadCatalogRecord(catlog_file)
+      kabalogService.loadCatalogRecord(request.XML)
       result.message = "Loaded";
     }
     catch ( Exception e ) {
