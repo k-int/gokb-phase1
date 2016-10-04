@@ -9,6 +9,7 @@ import au.com.bytecode.opencsv.CSVReader
 
 class IntegrationController {
 
+  def kabalogService
   def grailsApplication
   def springSecurityService
   def titleLookupService
@@ -851,4 +852,24 @@ class IntegrationController {
     }
   }
 
+
+  /**
+   *  A catalog record is a combination of title data AND holdings data - the KABALOG deals with connecting
+   *  title metadata with holdings instance data as separate relational structures instead of monolithic
+   *  chunks of inseperable data
+   */
+  @Secured(['ROLE_API', 'IS_AUTHENTICATED_FULLY'])
+  def loadCatalgRecord() {
+    def result = [:]
+    def catalog_file = request.getFile("titleFile")?.inputStream
+    try {
+      kabalogService.loadCatalogRecord(catlog_file)
+      result.message = "Loaded";
+    }
+    catch ( Exception e ) {
+      result.message = "Problem loading file: ${e}";
+      log.error("Problem loading file",e);
+    }
+    render result as JSON
+  }
 }
