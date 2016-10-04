@@ -174,6 +174,15 @@ class TitleLookupService {
     return find([title:title, publisher_name:publisher_name,identifiers:identifiers],user,project,newTitleClassName)
   }
 
+
+  /**
+   * Metadata properties {
+   *   title:'',
+   *   identifiers:[
+   *   ],
+   *   publisher_name:''
+   * }
+   **/
   def find (Map metadata,
             def user = null, 
             def project = null,
