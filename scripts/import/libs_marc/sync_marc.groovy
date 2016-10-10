@@ -10,6 +10,8 @@
   @Grab(group='org.apache.httpcomponents', module='httpmime', version='4.5.2'),
   @Grab(group='commons-net', module='commons-net', version='3.5'),
   @Grab(group='marc4j', module='marc4j', version='2.7.0'),
+  @Grab(group='xalan', module='xalan', version='2.7.2'),
+  @Grab(group='xerces', module='xercesImpl', version='2.11.0'),
   @GrabExclude('org.codehaus.groovy:groovy-all')
 ])
 
@@ -60,6 +62,17 @@ else {
   config.packageData=[:]
 }
 
+// javax.xml.transform.TransformerFactory -- do we need to set this to force XALAN
+// Using groovy -Djaxp.debug=1 sync_marc.groovy file.mrc -- can help with debugging
+// <system-property javax.xml.parsers.DocumentBuilderFactory= "com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl"/>
+// <system-property javax.xml.parsers.SAXParserFactory= "com.sun.org.apache.xerces.internal.jaxp.SAXParserFactoryImpl">
+// <system-property javax.xml.transform.TransformerFactory= "com.sun.org.apache.xalan.internal.xsltc.trax.TransformerFactoryImpl"/>
+// -Djavax.xml.parsers.SAXParserFactory=com.sun.org.apache.xerces.internal.jaxp.SAXParserFactoryImpl
+// -Djavax.xml.transform.TransformerFactory=com.sun.org.apache.xalan.internal.xsltc.trax.TransformerFactoryImpl
+// -Djavax.xml.parsers.DocumentBuilderFactory=com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl
+// groovy -Djaxp.debug=1  -Djavax.xml.parsers.SAXParserFactory=com.sun.org.apache.xerces.internal.jaxp.SAXParserFactoryImpl -Djavax.xml.transform.TransformerFactory=com.sun.org.apache.xalan.internal.xsltc.trax.TransformerFactoryImpl -Djavax.xml.parsers.DocumentBuilderFactory=com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl sync_marc.groovy 
+
+
 println("Using config ${config}");
 def httpbuilder = new HTTPBuilder( 'http://localhost:8080' )
 httpbuilder.auth.basic config.uploadUser, config.uploadPass
@@ -67,27 +80,46 @@ httpbuilder.auth.basic config.uploadUser, config.uploadPass
 // Convert input file marcxml to output file marc21
 InputStream is = new FileInputStream(args[0])
 MarcStreamReader reader = new MarcStreamReader(is);
+Source stylesheet = new StreamSource(new File('./MARC21slim2MODS3-6.xsl'));
 
 // See example 15 http://projects.freelibrary.info/freelib-marc4j/tutorial.html
-// String stylesheetUrl = 'http://www.loc.gov/standards/mods/v3/MARC21slim2MODS3-6.xsl';
-File ss_file = new File('./MARC21slim_MODS3-6_XSLT2-0.xsl');
-File res = new File('./mods_records')
-Source stylesheet = new StreamSource(ss_file);
-Result result = new StreamResult(new FileOutputStream(res));
+// File ss_file = new File('./MARC21slim_MODS3-6_XSLT2-0.xsl');
+// Source stylesheet = new StreamSource('http://www.loc.gov/standards/mods/v3/MARC21slim2MODS3-6.xsl');
 
+// File res = new File('./mods_records')
+// Result result = new StreamResult(new FileOutputStream(res));
 // Output just XML: MarcXmlWriter writer = new MarcXmlWriter(result);
 // Output via XSL:  MarcXmlWriter writer = new MarcXmlWriter(result, stylesheet);
-MarcXmlWriter writer = new MarcXmlWriter(result);
-writer.setConverter(new AnselToUnicode());
+// MarcXmlWriter writer = new MarcXmlWriter(System.out);
+// writer.setConverter(new AnselToUnicode());
 
 
 println("Reading records...");
 while (reader.hasNext()) {
-  println("Record");
-  Record record = reader.next();
-  // println(record.toString() + "\n************\n");
-  // addToGoKB(false, httpbuilder, mods_record)
-  writer.write(record);
+  try {
+    println("Read Record");
+    Record record = reader.next();
+    println(record.toString() + "\n************\n");
+    // addToGoKB(false, httpbuilder, mods_record)
+    // ByteArrayOutputStream baos = new ByteArrayOutputStream()
+    // Result result = new StreamResult(baos)
+    // MarcXmlWriter writer = new MarcXmlWriter(result, stylesheet);
+    MarcXmlWriter writer = new MarcXmlWriter(System.out);
+    // writer.setConverter(new AnselToUnicode());
+    writer.write(record);
+    writer.close()
+    // def ba = baos.toByteArray()
+    // println("MODS record follows ${ba.length}");
+
+    // println(new String(ba));
+    println("done");
+  }
+  catch(Exception e) {
+    e.printStackTrace()
+  }
+  finally {
+    println("Loop");
+  }
 }
 println("Done converting...");
 
