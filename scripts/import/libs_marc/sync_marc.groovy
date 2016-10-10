@@ -38,8 +38,17 @@ import static groovyx.net.http.ContentType.XML
 import static groovyx.net.http.Method.GET
 import java.io.InputStream
 import java.io.FileInputStream
-import org.marc4j.marc.Record
-import org.marc4j.MarcStreamReader
+
+import java.io.InputStream;
+import javax.xml.transform.Result;
+import javax.xml.transform.Source;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
+import org.marc4j.MarcReader;
+import org.marc4j.MarcStreamReader;
+import org.marc4j.MarcXmlWriter;
+import org.marc4j.converter.impl.AnselToUnicode;
+import org.marc4j.marc.Record;
 
 config = null;
 cfg_file = new File('./sync-marc-cfg.json')
@@ -59,12 +68,26 @@ httpbuilder.auth.basic config.uploadUser, config.uploadPass
 InputStream is = new FileInputStream(args[0])
 MarcStreamReader reader = new MarcStreamReader(is);
 
+// See example 15 http://projects.freelibrary.info/freelib-marc4j/tutorial.html
+// String stylesheetUrl = 'http://www.loc.gov/standards/mods/v3/MARC21slim2MODS3-6.xsl';
+File ss_file = new File('./MARC21slim_MODS3-6_XSLT2-0.xsl');
+File res = new File('./mods_records')
+Source stylesheet = new StreamSource(ss_file);
+Result result = new StreamResult(new FileOutputStream(res));
+
+// Output just XML: MarcXmlWriter writer = new MarcXmlWriter(result);
+// Output via XSL:  MarcXmlWriter writer = new MarcXmlWriter(result, stylesheet);
+MarcXmlWriter writer = new MarcXmlWriter(result);
+writer.setConverter(new AnselToUnicode());
+
+
 println("Reading records...");
 while (reader.hasNext()) {
   println("Record");
   Record record = reader.next();
-  println(record.toString() + "\n************\n");
+  // println(record.toString() + "\n************\n");
   // addToGoKB(false, httpbuilder, mods_record)
+  writer.write(record);
 }
 println("Done converting...");
 
