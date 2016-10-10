@@ -9,6 +9,7 @@
   @Grab(group='org.apache.httpcomponents', module='httpclient', version='4.5.2'),
   @Grab(group='org.apache.httpcomponents', module='httpmime', version='4.5.2'),
   @Grab(group='commons-net', module='commons-net', version='3.5'),
+  @Grab(group='marc4j', module='marc4j', version='2.7.0'),
   @GrabExclude('org.codehaus.groovy:groovy-all')
 ])
 
@@ -38,13 +39,10 @@ import static groovyx.net.http.Method.GET
 import java.io.InputStream
 import java.io.FileInputStream
 import org.marc4j.marc.Record
-import org.marc4j.MarcXmlReader
-import org.marc4j.MarcStreamWriter
-
-this.getClass().classLoader.rootLoader.addURL(new File("marc4j-2.7.0.jar").toURL())
+import org.marc4j.MarcStreamReader
 
 config = null;
-cfg_file = new File('./sync-copac-cfg.json')
+cfg_file = new File('./sync-marc-cfg.json')
 if ( cfg_file.exists() ) {
   config = new JsonSlurper().parseText(cfg_file.text);
 }
