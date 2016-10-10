@@ -2,6 +2,7 @@ package org.gokb.cred
 
 import javax.persistence.Transient
 import groovy.util.logging.Log4j
+import com.k_int.ClassUtils
 
 
 import org.gokb.refine.*
@@ -345,14 +346,126 @@ order by tipp.id""",[this, refdata_package_tipps, refdata_hosted_tipps, refdata_
 
   /**
    * Definitive rules for taking a package header DTO and inserting or updating an existing package based on package name
+   *
+   * listStatus:'Checked',
+   * status:'Current',
+   * breakable:'Unknown',
+   * consistent:'Unknown',
+   * fixed:'Unknown',
+   * paymentType:'Unknown',
+   * global:'Global',
+   * nominalPlatform:'Content Select'
+   * nominalProvider:'Preselect.media'
+   * listVerifier:'',
+   * userListVerifier:'benjamin_ahlborn'
+   * listVerifierDate:'2015-06-19T00:00:00Z'
+   * source:[
+   *   url:'http://www.zeitschriftendatenbank.de'
+   *   defaultAccessURL:''
+   *   explanationAtSource:''
+   *   contextualNotes:''
+   *   frequency:''
+   *   ruleset:''
+   *   defaultSupplyMethod:'Other'
+   *   defaultDataFormat:'Other'
+   *   responsibleParty:''
+   * ]
+   * name:'Campus: All Journals'
+   * curatoryGroups:[
+   *   curatoryGroup:"SuUB Bremen"
+   * ]
+   * variantNames : [
+   *   variantName:"Campus: All Journals"
+   * ]
    */
   @Transient
   public static Package upsertDTO(packageHeaderDTO) {
+    def sdf = new java.text.SimpleDateFormat("yyyy-MM-dd' 'HH:mm:ss.SSS");
     def result = null
-    log.debug("Upsert package with name ${packageHeaderDTO.name}");
+    log.info("Upsert package with header ${packageHeaderDTO}");
     result = Package.findByName(packageHeaderDTO.name) ?: new Package(name:packageHeaderDTO.name).save(flush:true, failOnError:true);
+
+    boolean changed = false;
+
+    changed |= ClassUtils.setRefdataIfPresent(packageHeaderDTO.listStatus, result, 'listStatus', 'Package.ListStatus')
+    changed |= ClassUtils.setRefdataIfPresent(packageHeaderDTO.status, result, 'status', 'KBComponent.Status')
+    changed |= ClassUtils.setRefdataIfPresent(packageHeaderDTO.scope, result, 'scope', 'Package.Scope')
+    changed |= ClassUtils.setRefdataIfPresent(packageHeaderDTO.breakable, result, 'breakable', 'Package.Breakable')
+    changed |= ClassUtils.setRefdataIfPresent(packageHeaderDTO.consistent, result, 'consistent', 'Package.Consistent')
+    changed |= ClassUtils.setRefdataIfPresent(packageHeaderDTO.fixed, result, 'fixed', 'Package.Fixed')
+    changed |= ClassUtils.setRefdataIfPresent(packageHeaderDTO.paymentType, result, 'paymentType', 'Package.PaymentType')
+    changed |= ClassUtils.setRefdataIfPresent(packageHeaderDTO.global, result, 'global', 'Package.Global')
+    changed |= ClassUtils.setStringIfDifferent(result, 'listVerifier', packageHeaderDTO.listVerifier?.toString())
+    // User userListVerifier
+    changed |= ClassUtils.setDateIfPresent(packageHeaderDTO.listVerifiedDate, result, 'listVerifiedDate', sdf);
+
+    if ( packageHeaderDTO.userListVerifier ) {
+      def looked_up_user = User.findByUsername(packageHeaderDTO.userListVerifier)
+      if ( looked_up_user && ( ( result.userListVerifier == null ) || ( result.userListVerifier?.id != looked_up_user?.id )  ) ) {
+        result.userListVerifier = looked_up_user
+        changed = true
+      }
+      else {
+        log.warn("Unable to find username for list verifier ${packageHeaderDTO.userListVerifier}");
+      }
+    }
+
+    if ( packageHeaderDTO.nominalPlatform ) {
+      def np = Platform.findByName(packageHeaderDTO.nominalPlatform)
+      if ( np ) {
+        result.nominalPlatform = np;
+        changed = true
+      }
+      else {
+        log.warn("Unable to locate nominal platform ${packageHeaderDTO.nominalPlatform}");
+      }
+    }
+
+    if ( packageHeaderDTO.nominalProvider ) {
+      def prov = Org.findByName(packageHeaderDTO.nominalProvider)
+      if ( prov ) {
+        result.provider = prov;
+        changed = true
+      }
+      else {
+        log.warn("Unable to locate nominal provider ${packageHeaderDTO.nominalProvider}");
+      }
+    }
+
+    if ( packageHeaderDTO.source?.url ) {
+      def src = Source.findByUrl(packageHeaderDTO.source.url)
+      if ( src ) {
+        result.source = src
+        changed = true
+      }
+    }
+
+    packageHeaderDTO.variantNames.each {
+      if ( it.variantName ) {
+        result.ensureVariantName(it.variantName)
+        changed=true;
+      }
+    }
+
+    packageHeaderDTO.curatoryGroups.each {
+      if ( it.curatoryGroup ) {
+
+        def cg = CuratoryGroup.findByName(it.curatoryGroup) ?: new CuratoryGroup(name:it.curatoryGroup).save(flush:true, failOnError:true)
+
+        if ( cg ) {
+          if ( result.curatoryGroups.find(it.name == cg.name) ) {
+          }
+          else {
+            result.curatoryGroups.add(cg)
+            changed=true;
+          }
+        }
+      }
+    }
+    
+    result.save(flush:true, failOnError:true);
+
+
     result
   }
-
-
 }
