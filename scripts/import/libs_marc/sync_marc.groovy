@@ -46,6 +46,7 @@ import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
+import javax.xml.transform.dom.DOMResult;
 import org.marc4j.MarcReader;
 import org.marc4j.MarcStreamReader;
 import org.marc4j.MarcXmlWriter;
@@ -93,6 +94,10 @@ Source stylesheet = new StreamSource(new File('./MARC21slim2MODS3-6.xsl'));
 // MarcXmlWriter writer = new MarcXmlWriter(System.out);
 // writer.setConverter(new AnselToUnicode());
 
+DOMResult result = new DOMResult();
+MarcXmlWriter writer = new MarcXmlWriter(result)
+writer.setConverter(new AnselToUnicode());
+
 
 println("Reading records...");
 while (reader.hasNext()) {
@@ -101,18 +106,9 @@ while (reader.hasNext()) {
     Record record = reader.next();
     println(record.toString() + "\n************\n");
     // addToGoKB(false, httpbuilder, mods_record)
-    // ByteArrayOutputStream baos = new ByteArrayOutputStream()
-    // Result result = new StreamResult(baos)
-    // MarcXmlWriter writer = new MarcXmlWriter(result, stylesheet);
-    MarcXmlWriter writer = new MarcXmlWriter(System.out);
-    // writer.setConverter(new AnselToUnicode());
     writer.write(record);
-    writer.close()
-    // def ba = baos.toByteArray()
-    // println("MODS record follows ${ba.length}");
 
-    // println(new String(ba));
-    println("done");
+    println("done result now contains a DOM tree for the MODS record");
   }
   catch(Exception e) {
     e.printStackTrace()
