@@ -288,7 +288,7 @@ class TitleInstance extends KBComponent {
                   "startDate" (pc.startDate)
                 }
                 if ( pc.endDate ) {
-                  "startDate" (pc.endDate)
+                  "endDate" (pc.endDate)
                 }
                 if (pc.status) {
                   "status" (pc.status)
