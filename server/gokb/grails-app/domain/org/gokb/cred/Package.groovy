@@ -1,8 +1,8 @@
 package org.gokb.cred
 
-import javax.persistence.Transient
 import groovy.util.logging.Log4j
 
+import javax.persistence.Transient
 
 import org.gokb.refine.*
 
@@ -244,10 +244,6 @@ order by tipp.id""",[this, refdata_package_tipps, refdata_hosted_tipps, refdata_
           'responsibleParty' (source?.responsibleParty?.name)
         }
         'name' (name)
-          builder.group {
-          }
-        }
-      }
 
         if ( curatoryGroups ) {
            builder.'curatoryGroups' {
