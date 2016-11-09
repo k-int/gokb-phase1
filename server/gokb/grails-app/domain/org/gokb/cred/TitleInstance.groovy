@@ -249,6 +249,8 @@ class TitleInstance extends KBComponent {
           builder.'name' (name)
           builder.'imprint' (imprint?.name)
           builder.'medium' (medium?.value)
+          builder.'status' (status?.value)
+          builder.'editStatus' (editStatus?.value)
           builder.'OAStatus' (OAStatus?.value)
           builder.'continuingSeries' (continuingSeries?.value)
           builder.'publishedFrom' (publishedFrom)
