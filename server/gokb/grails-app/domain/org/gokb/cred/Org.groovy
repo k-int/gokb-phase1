@@ -153,17 +153,19 @@ class Org extends KBComponent {
     
     builder.'gokb' (attr) {
       builder.'org' (['id':(id)]) {
-        builder.'name' (name)
+       
+        addCoreGOKbXmlFields ( builder, attr )
+//        builder.'name' (name)
         builder.'homepage' (homepage)
-        builder.'status' (status?.value)
+//        builder.'status' (status?.value)
 
-        if (identifiers) {
-          builder.'identifiers' {
-            identifiers.each { tid ->
-              builder.'identifier' (['namespace':tid.namespace.value, 'datatype':tid.namespace.datatype?.value], tid.value) 
-            }
-          }
-        }
+//        if (identifiers) {
+//          builder.'identifiers' {
+//            identifiers.each { tid ->
+//              builder.'identifier' (['namespace':tid.namespace.value, 'datatype':tid.namespace.datatype?.value], tid.value) 
+//            }
+//          }
+//        }
 
         if ( roles ) {
           builder.'roles' {
@@ -173,13 +175,13 @@ class Org extends KBComponent {
           }
         }
 
-        if ( variantNames ) {
-          builder.'variantNames' {
-            variantNames.each { vn ->
-              builder.'variantName' ( vn.variantName )
-            }
-          }
-        }
+//        if ( variantNames ) {
+//          builder.'variantNames' {
+//            variantNames.each { vn ->
+//              builder.'variantName' ( vn.variantName )
+//            }
+//          }
+//        }
 
         if ( mission ) {
           builder.mission ( mission.value )

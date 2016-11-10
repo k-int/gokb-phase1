@@ -94,7 +94,10 @@ class Office extends KBComponent {
   def toGoKBXml(builder, attr) {
     def sdf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
     builder.'gokb' (attr) {
-      builder.'name' (name)
+      
+      addCoreGOKbXmlFields(builder, attr)
+      
+//      builder.'name' (name)
       builder.'website' (website)
       builder.'phoneNumber' (phoneNumber)
       builder.'otherDetails' (otherDetails)

@@ -219,9 +219,11 @@ order by tipp.id""",[this, refdata_package_tipps, refdata_hosted_tipps, refdata_
     
     builder.'gokb' (attr) {
       builder.'package' (['id':(id)]) {
+//        'status' ( status?.value )
+        addCoreGOKbXmlFields(builder, attr)
+        
         'scope' ( scope?.value )
         'listStatus' ( listStatus?.value )
-        'status' ( status?.value )
         'breakable' ( breakable?.value )
         'consistent' ( consistent?.value )
         'fixed' ( fixed?.value )
@@ -243,7 +245,7 @@ order by tipp.id""",[this, refdata_package_tipps, refdata_hosted_tipps, refdata_
           'defaultDataFormat' (source?.defaultSupplyMethod?.value)
           'responsibleParty' (source?.responsibleParty?.name)
         }
-        'name' (name)
+//        'name' (name)
 
         if ( curatoryGroups ) {
            builder.'curatoryGroups' {
@@ -255,13 +257,13 @@ order by tipp.id""",[this, refdata_package_tipps, refdata_hosted_tipps, refdata_
              }
            }
         }
-        if ( variantNames ) {
-           builder.'variantNames' {
-             variantNames.each { vn ->
-               builder.'variantName' ( vn.variantName )
-             }
-           }
-        }
+//        if ( variantNames ) {
+//           builder.'variantNames' {
+//             variantNames.each { vn ->
+//               builder.'variantName' ( vn.variantName )
+//             }
+//           }
+//        }
         'dateCreated' (sdf.format(dateCreated))
         'TIPPs'(count:tipps?.size()) {
           tipps.each { tipp ->

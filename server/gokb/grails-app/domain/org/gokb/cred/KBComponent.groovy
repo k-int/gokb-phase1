@@ -1100,4 +1100,55 @@ abstract class KBComponent {
     this.delete(flush:true, failOnError:true)
     result;
   }
+  
+  @Transient
+  def addCoreGOKbXmlFields(builder, attr) {
+    def cids = getIds() ?: []
+    String cName = this.class.name
+    
+    // Singel props.
+    builder.'name' (name)
+    builder.'status' (status?.value)
+    builder.'editStatus' (editStatus?.value)
+    builder.'shortcode' (shortcode)
+    
+    // Identifiers
+    builder.'identifiers' {
+      cids?.each { tid ->
+        builder.'identifier' ('namespace':tid?.namespace?.value, 'value':tid?.value)
+      }
+      if ( grailsApplication.config.serverUrl != null ) {
+        builder.'identifier' ('namespace':'originEditUrl', 'value':"${grailsApplication.config.serverUrl}/resource/show/${cName}:${id}")
+      }
+    }
+    
+    // Variant Names
+    if ( variantNames ) {
+      builder.'variantNames' {
+        variantNames.each { vn ->
+          builder.'variantName' ( vn.variantName )
+        }
+      }
+    }
+    
+    // Tags
+    if ( tags ) {
+      builder.'tags' {
+        tags.each { tag ->
+          builder.'tag' (tag.value)
+        }
+      }
+    }
+    
+    if (additionalProperties) {
+      builder.'additionalProperties' {
+        additionalProperties.each { prop ->
+          String pName = prop.propertyDefn?.propertyName
+          if (pName && prop.apValue) {
+            builder.'additionalProperty' ('name':pName, 'value':prop.apValue)
+          }
+        }
+      }
+    }
+  }
 }
