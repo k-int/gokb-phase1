@@ -1117,7 +1117,7 @@ abstract class KBComponent {
       cids?.each { tid ->
         builder.'identifier' ('namespace':tid?.namespace?.value, 'value':tid?.value)
       }
-      if ( grailsApplication.config.serverUrl != null ) {
+      if ( grailsApplication.config.serverUrl ) {
         builder.'identifier' ('namespace':'originEditUrl', 'value':"${grailsApplication.config.serverUrl}/resource/show/${cName}:${id}")
       }
     }
