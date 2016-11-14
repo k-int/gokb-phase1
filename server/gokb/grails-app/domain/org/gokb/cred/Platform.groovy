@@ -76,12 +76,27 @@ class Platform extends KBComponent {
 
     builder.'gokb' (attr) {
       builder.'platform' (['id':(id)]) {
+        
         addCoreGOKbXmlFields(builder, attr)
-//        builder.'name' (name)
+
         builder.'primaryUrl' (primaryUrl)
-        builder.'authentication' (authentication?.value)
         builder.'software' (software?.value)
         builder.'service' (service?.value)
+        
+        builder.'authentication' (authentication?.value)
+        if (ipAuthentication) builder.'ipAuthentication' (ipAuthentication.value)
+        if (shibbolethAuthentication) builder.'shibbolethAuthentication' (shibbolethAuthentication.value)
+        if (passwordAuthenitcation) builder.'passwordAuthenitcation' (passwordAuthenitcation.value)
+        
+        builder.'provider' (provider?.name)
+        if ( roles ) {
+          builder.'roles' {
+            roles.each { role ->
+              builder.'role' (role.value)
+            }
+          }
+        }
+        
         builder.curatoryGroups {
           curatoryGroups.each { cg ->
             builder.group {
