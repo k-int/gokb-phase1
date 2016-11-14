@@ -233,7 +233,7 @@ order by tipp.id""",[this, refdata_package_tipps, refdata_hosted_tipps, refdata_
         'nominalProvider' ( nominalPlatform?.provider?.name )
         'listVerifier' ( listVerifier )
         'userListVerifier' ( userListVerifier?.username )
-        'listVerifierDate' ( listVerifiedDate ? sdf.format(listVerifiedDate) : null )
+        'listVerifiedDate' ( listVerifiedDate ? sdf.format(listVerifiedDate) : null )
         'source' {
           'url' (source?.url)
           'defaultAccessURL' (source?.defaultAccessURL)
