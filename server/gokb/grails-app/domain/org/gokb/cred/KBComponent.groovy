@@ -1168,5 +1168,31 @@ abstract class KBComponent {
         }
       }
     }
+    
+    if (source) {
+      
+      source.with {
+      
+        addCoreGOKbXmlFields(builder, attr)
+        
+        builder.'url' (url)
+        builder.'defaultAccessURL' (defaultAccessURL)
+        builder.'explanationAtSource' (explanationAtSource)
+        builder.'contextualNotes' (contextualNotes)
+        builder.'frequency' (frequency)
+        builder.'ruleset' (ruleset)
+        if ( defaultSupplyMethod ) {
+          builder.'defaultSupplyMethod' ( defaultSupplyMethod.value )
+        }
+        if ( defaultDataFormat ) {
+          builder.'defaultDataFormat' ( defaultDataFormat.value )
+        }
+        if ( responsibleParty ) {
+          builder.'responsibleParty' {
+            builder.name(responsibleParty.name)
+          }
+        }
+      }
+    }
   }
 }

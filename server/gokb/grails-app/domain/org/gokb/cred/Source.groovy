@@ -82,9 +82,6 @@ class Source extends KBComponent {
       
       addCoreGOKbXmlFields(builder, attr)
       
-//      builder.'name' (name)
-//      builder.'shortcode' (shortcode)
-//      builder.'editStatus' (editStatus?.value)
       builder.'url' (url)
       builder.'defaultAccessURL' (defaultAccessURL)
       builder.'explanationAtSource' (explanationAtSource)
