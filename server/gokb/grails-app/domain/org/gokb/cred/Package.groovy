@@ -247,15 +247,12 @@ order by tipp.id""",[this, refdata_package_tipps, refdata_hosted_tipps, refdata_
         }
 //        'name' (name)
 
-        if ( curatoryGroups ) {
-           builder.'curatoryGroups' {
-             curatoryGroups.each { cg ->
-               builder.'curatoryGroup' {
-                 builder.owner(cg.owner?.username)
-                 builder.name(cg.name)
-               }
-             }
-           }
+        builder.curatoryGroups {
+          curatoryGroups.each { cg ->
+            builder.group {
+              builder.name(cg.name)
+            }
+          }
         }
 //        if ( variantNames ) {
 //           builder.'variantNames' {
