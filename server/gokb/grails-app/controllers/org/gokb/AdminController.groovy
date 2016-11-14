@@ -225,4 +225,27 @@ class AdminController {
     cleanupService.expungeDeletedComponents()
     render(view: "logViewer", model: logViewer())
   }
+  
+  def exportGroups () {
+    def result = [:]
+    CuratoryGroup.createCriteria().list ({
+      createAlias ('status', 'cstatus', CriteriaSpecification.LEFT_JOIN)
+      or {
+        isNull 'status'
+        and {
+          ne 'cstatus.value', KBComponent.STATUS_DELETED
+          ne 'cstatus.value', KBComponent.STATUS_RETIRED
+        }
+      }
+    })?.each { CuratoryGroup group ->
+      result["${group.name}"] = [
+        users : group.users.collect { it.username },
+        owner : group.owner?.username,
+        status : group.status?.value,
+        editStatus : group.editStatus?.value
+      ]
+    }
+    
+    render result as JSON
+  }
 }
