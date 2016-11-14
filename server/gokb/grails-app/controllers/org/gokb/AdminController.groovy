@@ -2,6 +2,7 @@ package org.gokb
 
 import org.gokb.cred.*
 import grails.converters.JSON
+import org.hibernate.criterion.CriteriaSpecification
 
 class AdminController {
 
@@ -227,6 +228,7 @@ class AdminController {
   }
   
   def exportGroups () {
+    
     def result = [:]
     CuratoryGroup.createCriteria().list ({
       createAlias ('status', 'cstatus', CriteriaSpecification.LEFT_JOIN)
