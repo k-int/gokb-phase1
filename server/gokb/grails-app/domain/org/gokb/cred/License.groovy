@@ -84,7 +84,7 @@ class License extends KBComponent {
   }
 
   /**
-   *  Render this package as GoKBXML
+   *  Render this license as GoKBXML
    */
   @Transient
   def toGoKBXml(builder, attr) {
@@ -98,7 +98,7 @@ class License extends KBComponent {
         builder.'type' (type.value)
       }
       builder.'summaryStatement' {
-        builder.yieldUnescaped "<![CDATA[${summaryStatement}]]>"
+        builder.mkp.yieldUnescaped "<![CDATA[${summaryStatement}]]>"
       }
 
       if ( licensor ) {
@@ -121,30 +121,13 @@ class License extends KBComponent {
         builder.'model' (model.name)
       }
 
-      builder.curatoryGroups {
+      builder.'curatoryGroups' {
         curatoryGroups.each { cg ->
           builder.group {
             builder.name(cg.name)
           }
         }
       }
-
-      builder.fileAttachments {
-        fileAttachments.each { fa ->
-          builder.fileAttachment {
-            builder.guid(fa.guid)
-            builder.md5(fa.md5)
-            builder.uploadName(fa.uploadName)
-            builder.uploadMimeType(fa.uploadMimeType)
-            builder.filesize(fa.filesize)
-            builder.doctype(fa.doctype)
-            builder.content {
-              builder.yieldUnescaped "<![CDATA[${fa.fileData}]]>"
-            }
-          }
-        }
-      }
-
     }
   }
 

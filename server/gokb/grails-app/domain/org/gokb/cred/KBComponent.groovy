@@ -9,6 +9,7 @@ import org.codehaus.groovy.grails.commons.GrailsDomainClass
 import org.codehaus.groovy.grails.commons.GrailsDomainClassProperty
 import org.gokb.GOKbTextUtils
 import org.hibernate.proxy.HibernateProxy
+import groovy.xml.MarkupBuilder
 
 /**
  * Abstract base class for GoKB Components.
@@ -1146,6 +1147,23 @@ abstract class KBComponent {
           String pName = prop.propertyDefn?.propertyName
           if (pName && prop.apValue) {
             builder.'additionalProperty' ('name':pName, 'value':prop.apValue)
+          }
+        }
+      }
+    }
+    if (fileAttachments) {
+      builder.fileAttachments {
+        fileAttachments.each { fa ->
+          builder.fileAttachment {
+            builder.guid(fa.guid)
+            builder.md5(fa.md5)
+            builder.uploadName(fa.uploadName)
+            builder.uploadMimeType(fa.uploadMimeType)
+            builder.filesize(fa.filesize)
+            builder.doctype(fa.doctype)
+            builder.content {
+              builder.mkp.yieldUnescaped "<![CDATA[${fa.fileData.encodeBase64().toString()}]]>"
+            }
           }
         }
       }
