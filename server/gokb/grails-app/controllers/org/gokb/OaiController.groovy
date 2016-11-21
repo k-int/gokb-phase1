@@ -6,7 +6,9 @@ import org.codehaus.groovy.grails.commons.GrailsClassUtils
 import org.gokb.cred.*
 import groovy.xml.MarkupBuilder
 import groovy.xml.StreamingMarkupBuilder
+import grails.transaction.Transactional
 
+@Transactional(readOnly=true)
 class OaiController {
 
   def grailsApplication

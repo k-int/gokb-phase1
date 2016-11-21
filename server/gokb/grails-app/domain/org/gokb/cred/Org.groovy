@@ -169,50 +169,50 @@ class Org extends KBComponent {
           builder.mission ( mission.value )
         }
         
-        if (publishes) {
-          'publishedTitles' {
-            publishes.each { title ->
-              builder.'title' (['id':title.id]) {
-                builder.'name' (title.name)
-                builder.'identifiers' {
-                  title.ids?.each { tid ->
-                    builder.'identifier' (['namespace':tid.namespace.value], tid.value)
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        if (issues) {
-          'issuedTitles' {
-            issues.each { title ->
-              builder.'title' (['id':title.id]) {
-                builder.'name' (title.name)
-                builder.'identifiers' {
-                  title.ids?.each { tid ->
-                    builder.'identifier' (['namespace':tid.namespace.value], tid.value)
-                  }
-                }
-              }
-            }
-          }
-        }
-        
-        if (provides) {
-          'providedPackages' {
-            provides.each { pkg ->
-              builder.'package' (['id':pkg.id]) {
-                builder.'name' (pkg.name)
-                builder.'identifiers' {
-                  pkg.ids?.each { tid ->
-                    builder.'identifier' (['namespace':tid.namespace.value], tid.value)
-                  }
-                }
-              }
-            }
-          }
-        }
+//         if (publishes) {
+//           'publishedTitles' {
+//             publishes.each { title ->
+//               builder.'title' (['id':title.id]) {
+//                 builder.'name' (title.name)
+//                 builder.'identifiers' {
+//                   title.ids?.each { tid ->
+//                     builder.'identifier' (['namespace':tid.namespace.value], tid.value)
+//                   }
+//                 }
+//               }
+//             }
+//           }
+//         }
+// 
+//         if (issues) {
+//           'issuedTitles' {
+//             issues.each { title ->
+//               builder.'title' (['id':title.id]) {
+//                 builder.'name' (title.name)
+//                 builder.'identifiers' {
+//                   title.ids?.each { tid ->
+//                     builder.'identifier' (['namespace':tid.namespace.value], tid.value)
+//                   }
+//                 }
+//               }
+//             }
+//           }
+//         }
+//         
+//         if (provides) {
+//           'providedPackages' {
+//             provides.each { pkg ->
+//               builder.'package' (['id':pkg.id]) {
+//                 builder.'name' (pkg.name)
+//                 builder.'identifiers' {
+//                   pkg.ids?.each { tid ->
+//                     builder.'identifier' (['namespace':tid.namespace.value], tid.value)
+//                   }
+//                 }
+//               }
+//             }
+//           }
+//         }
       }
     }
   }

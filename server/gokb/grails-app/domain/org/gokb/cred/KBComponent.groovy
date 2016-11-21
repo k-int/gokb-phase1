@@ -1136,7 +1136,7 @@ abstract class KBComponent {
     if ( tags ) {
       builder.'tags' {
         tags.each { tag ->
-          builder.'tag' (tag.value)
+          builder.'tag' (type:tag.owner.desc , value:tag.value)
         }
       }
     }
