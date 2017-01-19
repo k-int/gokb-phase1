@@ -14,6 +14,9 @@ class User extends Party {
 
   transient springSecurityService
   transient grailsApplication
+  transient passwordEncoder
+
+
 
   // Used in user import to bypass password encoding - used to directly load hashes instead of password
   transient direct_password = false
@@ -167,7 +170,8 @@ class User extends Party {
 
   protected void encodePassword() {
     // log.debug("Encoding password: ${password} (This should be plaintext at this stage)")
-    password = springSecurityService.encodePassword(password)
+    // password = springSecurityService.encodePassword(password)
+    password = passwordEncoder.encodePassword(password,null)
   }
 
 
