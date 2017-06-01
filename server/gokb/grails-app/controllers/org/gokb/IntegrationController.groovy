@@ -2,12 +2,9 @@ package org.gokb
 
 import grails.converters.JSON
 import grails.transaction.Transactional
-
 import org.springframework.security.access.annotation.Secured;
 import org.gokb.cred.*
-
 import au.com.bytecode.opencsv.CSVReader
-
 import com.k_int.ClassUtils
 
 import groovy.util.logging.*
@@ -119,7 +116,7 @@ class IntegrationController {
             if ( located_entries?.size() == 0 ) {
               log.debug("No match on normalised name ${normname}.. Trying variant names");
               def variant_normname = GOKbTextUtils.normaliseString( name )
-              def located_entries = Org.executeQuery("select distinct o from Org as o join o.variantNames as v where v.normVariantName = ?",[variant_normname]);
+              located_entries = Org.executeQuery("select distinct o from Org as o join o.variantNames as v where v.normVariantName = ?",[variant_normname]);
 
               if ( located_entries?.size() == 0 ) {
 
@@ -248,51 +245,79 @@ class IntegrationController {
     log.debug("assertOrg, request.json = ${request.JSON}");
     def result=[:]
     result.status = true;
+    def assert_errors = false;
 
     try {
       def located_or_new_org = resolveOrgUsingPrivateIdentifiers(request.JSON.identifiers)
 
       if ( located_or_new_org == null ) {
-        String orgName = request.JSON.name
-        
-        // No match. One more attempt to match on norm_name only.
-        located_or_new_org = Org.findByNormname( Org.generateNormname (orgName) )
-        
-        if ( located_or_new_org == null ) {
+        if ( request.JSON.name ) {
+          String orgName = request.JSON.name
+          String orgNormName = Org.generateNormname (orgName)
 
-          def variant_normname = GOKbTextUtils.normaliseString( orgName )
-          def candidate_orgs = Org.executeQuery("select distinct o from Org as o join o.variantNames as v where v.normVariantName = ?",[variant_normname]);
+          // No match. One more attempt to match on norm_name only.
+          def org_by_name = Org.findAllByNormname( orgNormName )
 
-          if(candidate_orgs.size() == 1){
-            located_or_new_org = candidate_orgs[0]
+          if ( org_by_name.size() == 1 ) {
+            located_or_new_org = org_by_name[0]
+          }
 
-            log.debug("Matched Org on variant name!");
-          }else{
-        
-            log.debug("Create new org with identifiers ${request.JSON.customIdentifiers} name will be \"${request.JSON.name}\" (${request.JSON.name.length()})");
+          if ( located_or_new_org == null && org_by_name.size() == 0 ) {
 
-            located_or_new_org = new Org(name:request.JSON.name)
+            def variant_normname = GOKbTextUtils.normaliseString( orgName )
+            def candidate_orgs = Org.executeQuery("select distinct o from Org as o join o.variantNames as v where v.normVariantName = ?",[variant_normname]);
 
-            log.debug("Attempt to save - validate: ${located_or_new_org}");
-  
-            if ( located_or_new_org.save(flush:true, failOnError : true) ) {
-              log.debug("Saved ok");
-            } else {
-              log.debug("Save failed ${located_or_new_org}");
-              result.errors = []
-              located_or_new_org.errors.each { e ->
-                log.error("Problem saving new org record",e);
-                result.errors.add("${e}".toString());
+            if(candidate_orgs.size() == 1){
+              located_or_new_org = candidate_orgs[0]
+
+              log.debug("Matched Org on variant name!");
+            }
+            else if( candidate_orgs.size() == 0 ){
+
+              log.debug("Create new org name will be \"${request.JSON.name}\" (${request.JSON.name?.length()})");
+
+              located_or_new_org = new Org(name:request.JSON.name, normname:orgNormName)
+
+              log.debug("Attempt to save - validate: ${located_or_new_org}");
+
+              if ( located_or_new_org.save(flush:true, failOnError : true) ) {
+                log.debug("Saved ok");
+              } else {
+                assert_errors = true;
               }
-              result.status = false;
-              return
+            }
+
+            else {
+              log.debug("Multiple matches via variant name, skipping Org!");
+              assert_errors = true;
             }
           }
+
+          else if ( org_by_name.size == 1 ) {
+            log.debug("Matched Org by normname!")
+          }
+
+          else {
+            log.debug("Multiple matches for org via normname!")
+            assert_errors = true;
+          }
         } else {
-          log.debug("Matched Org on norm_name only!");
+          log.warn("Provided Org has no name!");
+          assert_errors = true;
         }
       } else {
         log.debug("Located existing record.. Still update...");
+      }
+
+      if(assert_errors){
+        log.debug("Save failed ${located_or_new_org}");
+        result.errors = []
+        located_or_new_org.errors.each { e ->
+          log.error("Problem saving new org record",e);
+          result.errors.add("${e}".toString());
+        }
+        result.status = false;
+        return
       }
       
       setAllRefdata ([
@@ -578,8 +603,14 @@ class IntegrationController {
       String testKey = "${ci.type}|${ci.value}".toString()
       if (!ids.contains(testKey)) {
         def canonical_identifier = Identifier.lookupOrCreateCanonicalIdentifier(ci.type,ci.value)
-        log.debug("adding identifier(${ci.type},${ci.value})(${canonical_identifier.id})")
-        component.ids.add(canonical_identifier)
+        log.debug("Checking identifiers of component ${component.id}")
+        def duplicate = Combo.executeQuery("Select c.id from Combo as c where c.toComponent.id = ? and c.fromComponent.id = ?",[canonical_identifier.id,component.id])
+        if(duplicate.size() == 0){
+          log.debug("adding identifier(${ci.type},${ci.value})(${canonical_identifier.id})")
+          component.ids.add(canonical_identifier)
+        }else{
+          log.debug("Identifier combo is already present, probably via titleLookupService.")
+        }
         
         // Add the value for comparison.
         ids << testKey
@@ -707,9 +738,16 @@ class IntegrationController {
     if ( request.JSON.packageHeader.name ) {
       def valid = Package.validateDTO(request.JSON.packageHeader)
       if ( valid ) {
-        def pkg_id = Package.upsertDTO(request.JSON.packageHeader)?.id
+        def the_pkg = Package.upsertDTO(request.JSON.packageHeader)
+        def existing_tipps = []
+
+        if ( the_pkg.tipps?.size() > 0 ) {
+          existing_tipps = the_pkg.tipps
+          log.debug("Matched package has ${the_pkg.tipps.size()} TIPPs")
+        }
+
         Map platform_cache = [:]
-        log.debug("\n\n\nPackage ID: ${pkg_id} / ${request.JSON.packageHeader}");
+        log.debug("\n\n\nPackage ID: ${the_pkg.id} / ${request.JSON.packageHeader}");
 
         // Validate and upsert titles and platforms
         request.JSON.tipps.each { tipp ->
@@ -757,9 +795,9 @@ class IntegrationController {
               log.warn("Skip platform upsert ${tipp.platform} - Not valid after platform check");
             }
 //            
-//            def pkg = pkg_id != null ? Package.get(pkg_id) : null
-            if ( ( tipp.package == null ) && ( pkg_id ) ) {
-              tipp.package = [ internalId: pkg_id ]
+//            def pkg = the_pkg.id != null ? Package.get(the_pkg.id) : null
+            if ( ( tipp.package == null ) && ( the_pkg.id ) ) {
+              tipp.package = [ internalId: the_pkg.id ]
             }
             else {
               log.warn("No package");
@@ -788,15 +826,46 @@ class IntegrationController {
 
         log.debug("\n\nupsert tipp data\n\n")
         tippctr=0
+
+        def tipps_to_delete = existing_tipps
+        def status_current = RefdataCategory.lookupOrCreate('KBComponent.Status','Current')
+
         if ( valid ) {
           def tipp_upsert_start_time = System.currentTimeMillis()
           // If valid, upsert tipps
           request.JSON.tipps.each { tipp ->
             TitleInstancePackagePlatform.withNewSession {
               log.debug("Upsert tipp [${tippctr++}] ${tipp}")
-              TitleInstancePackagePlatform.upsertDTO(tipp)
+
+              def ups_tipp = TitleInstancePackagePlatform.upsertDTO(tipp)
+
+              if ( existing_tipps.size() > 0 && ups_tipp && existing_tipps.contains(ups_tipp) ) {
+                log.debug("Existing TIPP matched!")
+                tipps_to_delete.remove(ups_tipp)
+              }
             }
           }
+          if ( existing_tipps.size() > 0 ) {
+            log.debug("Found ${tipps_to_delete.size()} TIPPS to retire from the matched package!")
+
+            tipps_to_delete.each { ttd ->
+
+              if ( ttd.status == status_current ) {
+
+                ttd.accessEndDate = new Date()
+                ttd.retire()
+                ttd.save(failOnError: true)
+
+                ReviewRequest.raise(
+                    ttd,
+                    "TIPP retired.",
+                    "An update to this package did not contain this TIPP.",
+                    user
+                )
+              }
+            }
+          }
+
           log.debug("Elapsed tipp processing time: ${System.currentTimeMillis()-tipp_upsert_start_time} for ${tippctr} records")
         }
         else {
@@ -885,7 +954,7 @@ class IntegrationController {
     
     render result as JSON
   }
-
+  
   /**
    *  Cross reference an incoming title with the database. See an example of calling this controller method
    *  in GOKB_PROJECT slash scripts slash sync_gokb_titles.groovy
@@ -913,124 +982,163 @@ class IntegrationController {
    *  }
    */
   @Secured(['ROLE_API', 'IS_AUTHENTICATED_FULLY'])
-  def crossReferenceTitle() {
+  def crossReferenceTitle() {	  
+    def result
+    def json = request.JSON
+
+    if(org.codehaus.groovy.grails.web.json.JSONArray != json.getClass()){
+
+      result = crossReferenceSingleTitle(json)
+    }
+    else {
+      result = []
+
+      json.eachWithIndex{ e, i ->
+        result <<  crossReferenceSingleTitle(e)
+      }
+    }
+    render result as JSON
+  }
+  
+  private crossReferenceSingleTitle(Object titleObj) {
+	  
     def result = [ 'result' : 'OK' ]
 
     def sdf = new java.text.SimpleDateFormat("yyyy-MM-dd' 'HH:mm:ss.SSS");
 
-    log.debug("crossReferenceTitle(${request.JSON.type},$request.JSON.title,${request.JSON.identifiers}},...)");
+    log.debug("crossReferenceTitle(${titleObj.type},${titleObj.title},${titleObj.identifiers}},...)");
 
     try {
-  
       User user = springSecurityService.currentUser
-      def title = titleLookupService.find(request.JSON.name, 
-                                          request.JSON.publisher, 
-                                          request.JSON.identifiers, 
-                                          user,
-                                          null,
-                                          request.JSON.type=='Serial' ? 'org.gokb.cred.JournalInstance' : 'org.gokb.cred.BookInstance' )  // project
-  
+      def title = titleLookupService.find(
+        titleObj.name,
+        titleObj.publisher,
+        titleObj.identifiers,
+        user,
+        null,
+        titleObj.type=='Serial' ? 'org.gokb.cred.JournalInstance' : 'org.gokb.cred.BookInstance'
+      );  // project
+
       if ( title ) {
-    
-//        if ( request.JSON.variantNames?.size() > 0 ) {
-//          request.JSON.variantNames.each { vn ->
+
+//        if ( titleObj.variantNames?.size() > 0 ) {
+//          titleObj.variantNames.each { vn ->
 //            log.debug("Ensure variant name ${vn}");
 //            title.addVariantTitle(vn);
 //          }
 //        }
-        
+
         def title_changed = false;
-    
-        if ( request.JSON.imprint ) {
-          if ( title.imprint?.name == request.JSON.imprint ) {
+
+        if ( titleObj.imprint ) {
+          if ( title.imprint?.name == titleObj.imprint ) {
             // Imprint already set
           }
           else {
-            def imprint = Imprint.findByName(request.JSON.imprint) ?: new Imprint(name:request.JSON.imprint).save(flush:true, failOnError:true);
+            def imprint = Imprint.findByName(titleObj.imprint) ?: new Imprint(name:titleObj.imprint).save(flush:true, failOnError:true);
             title.imprint = imprint;
             title_changed = true
           }
         }
-    
+
         title_changed |= setAllRefdata ([
-          'software', 'service',
-          'OAStatus', 'medium',
-          'pureOA', 'continuingSeries',
-          'reasonRetired'
-        ], request.JSON, title)
-        
-        title_changed |= ClassUtils.setDateIfPresent(request.JSON.publishedFrom, title, 'publishedFrom', sdf)
-        title_changed |= ClassUtils.setDateIfPresent(request.JSON.publishedTo, title, 'publishedTo', sdf)        
-        
+              'software', 'service',
+              'OAStatus', 'medium',
+              'pureOA', 'continuingSeries',
+              'reasonRetired'
+        ], titleObj, title)
+
+        title_changed |= ClassUtils.setDateIfPresent(titleObj.publishedFrom, title, 'publishedFrom', sdf)
+        title_changed |= ClassUtils.setDateIfPresent(titleObj.publishedTo, title, 'publishedTo', sdf)
+
         // Add the core data.
-        ensureCoreData(title, request.JSON)
-        
-        
+        ensureCoreData(title, titleObj)
+
 //        title.save(flush:true, failOnError:true)
-    
-        if ( request.JSON.historyEvents?.size() > 0 ) {
-          request.JSON.historyEvents.each { jhe ->
-            // 1971-01-01 00:00:00.0
+
+        if ( titleObj.historyEvents?.size() > 0 ) {
+
+          titleObj.historyEvents.each { jhe ->
+                // 1971-01-01 00:00:00.0
             log.debug("Handling title history");
             try {
               def inlist = []
               def outlist = []
               def cont = true
+
               jhe.from.each { fhe ->
-                def p = titleLookupService.find(fhe.title,
-                                                null,
-                                                fhe.identifiers,
-                                                user,
-                                                null,
-                                                request.JSON.type=='Serial' ? 'org.gokb.cred.JournalInstance' : 'org.gokb.cred.BookInstance' );
+
+                def p = titleLookupService.find(
+                  fhe.title,
+                  null,
+                  fhe.identifiers,
+                  user,
+                  null,
+                  titleObj.type=='Serial' ? 'org.gokb.cred.JournalInstance' : 'org.gokb.cred.BookInstance'
+                );
+
                 if ( p ) { inlist.add(p); } else { cont = false; }
               }
+
               jhe.to.each { fhe ->
-                def p =  titleLookupService.find(fhe.title,
-                                                             null,
-                                                             fhe.identifiers,
-                                                             user,
-                                                             null,
-                                                             request.JSON.type=='Serial' ? 'org.gokb.cred.JournalInstance' : 'org.gokb.cred.BookInstance' );
-                if ( p ) { outlist.add(p); } else { cont = false; }
+
+                def p =  titleLookupService.find(
+                  fhe.title,
+                  null,
+                  fhe.identifiers,
+                  user,
+                  null,
+                  titleObj.type=='Serial' ? 'org.gokb.cred.JournalInstance' : 'org.gokb.cred.BookInstance'
+                );
+
+                if ( p && !inlist.contains(p) ) { outlist.add(p); } else { cont = false; }
               }
-    
+
               def first = true;
               // See if we can locate an existing ComponentHistoryEvent involving all the titles specified in this event
               def che_check_qry_sw  = new StringWriter();
               def qparams = []
+
               che_check_qry_sw.write('select che from ComponentHistoryEvent as che where ')
-    
+
               inlist.each { fhe ->
                 if ( first ) { first = false; } else { che_check_qry_sw.write(' AND ') }
+
                 che_check_qry_sw.write(' exists ( select chep from ComponentHistoryEventParticipant as chep where chep.event = che and chep.participant = ?) ')
                 qparams.add(fhe)
               }
+
               outlist.each { fhe ->
                 if ( first ) { first = false; } else { che_check_qry_sw.write(' AND ') }
+
                 che_check_qry_sw.write(' exists ( select chep from ComponentHistoryEventParticipant as chep where chep.event = che and chep.participant = ?) ')
                 qparams.add(fhe)
               }
-    
+
               def che_check_qry = che_check_qry_sw.toString()
+
               log.debug("Search for existing history event:: ${che_check_qry} ${qparams}");
+
               def qr = ComponentHistoryEvent.executeQuery(che_check_qry, qparams);
+
               if ( qr.size() > 0 )
                 cont = false;
-    
+
               if ( cont ) {
-      
+
                 def he = new ComponentHistoryEvent()
+
                 if ( jhe.date ) {
                   he.eventDate = sdf.parse(jhe.date);
                 }
+
                 he.save(flush:true, failOnError:true);
-        
+
                 inlist.each {
                   def hep = new ComponentHistoryEventParticipant(event:he, participant:it, participantRole:'in');
                   hep.save(flush:true, failOnError:true);
                 }
-    
+
                 outlist.each {
                   def hep = new ComponentHistoryEventParticipant(event:he, participant:it, participantRole:'out');
                   hep.save(flush:true, failOnError:true);
@@ -1041,23 +1149,23 @@ class IntegrationController {
               }
             }
             catch ( Exception e ) {
-              log.error("Problem processing title history",e);
+                  log.error("Problem processing title history",e);
             }
           }
         }
-        
-        addPublisherHistory(title, request.JSON.publisher_history, sdf)
-  
+
+        addPublisherHistory(title, titleObj.publisher_history, sdf)
+
         result.message = "Created/looked up title ${title.id}"
         result.cls = title.class.name
         result.titleId = title.id
       }
       else {
-        result.message = "No title for ${request.JSON}";
-        log.error("Cross Reference Title failed :${request.JSON}");
-        // applicationEventService.publishApplicationEvent('CriticalSystemMessages', 'ERROR', [description:"Cross Reference Title failed :${request.JSON}"])
-        event ( topic:'IntegrationDataError', data:[description:"Cross Reference Title failed :${request.JSON}"], params:[:]) {
-          // Event callback closure
+        result.message = "No title for ${titleObj}";
+        log.error("Cross Reference Title failed :${titleObj}");
+        // applicationEventService.publishApplicationEvent('CriticalSystemMessages', 'ERROR', [description:"Cross Reference Title failed :${titleObj}"])
+        event ( topic:'IntegrationDataError', data:[description:"Cross Reference Title failed :${titleObj}"], params:[:]) {
+              // Event callback closure
         }
       }
     }
@@ -1065,14 +1173,14 @@ class IntegrationController {
       log.error("Exception attempting to cross reference title",e);
       result.result="ERROR"
       result.message=e.toString()
-      result.baddata=request.JSON
-      log.error("Source message causing error (ADD_TO_TEST_CASES): ${request.JSON}");
+      result.baddata=titleObj
+      log.error("Source message causing error (ADD_TO_TEST_CASES): ${titleObj}");
     }
     finally {
       log.debug("Result of cross ref title: ${result}");
     }
 
-    render result as JSON
+    result
   }
   
   private addPublisherHistory ( TitleInstance ti, publishers, sdf) {

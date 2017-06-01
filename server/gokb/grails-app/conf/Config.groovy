@@ -351,7 +351,8 @@ identifiers = [
     "eissn",
     "doi",
     "isbn",
-    "issnl"
+    "issnl",
+    "zdb"
   ],
 
   // Class ones that need to be cross-checked. If an Identifier supplied as an ISSN,
@@ -377,6 +378,8 @@ identifiers = [
 project_dir = new java.io.File(org.codehaus.groovy.grails.io.support.GrailsResourceUtils.GRAILS_APP_DIR + "/../project-files/").getCanonicalPath() + "/"
 
 refine_min_version = "3.0.0"
+
+// ftupdate_enabled = true
 
 // Config for the refine extension build process.
 refine = [
@@ -549,6 +552,7 @@ log4j = {
             'grails.app.jobs',
             'com.k_int',
             'org.gokb.cred.RefdataCategory',
+            'org.gokb.IntegrationController',
             'com.k_int.apis',
             'com.k_int.asset.pipeline.groovy',
             'asset.pipeline.less.compilers',
@@ -596,6 +600,7 @@ grails.plugin.springsecurity.controllerAnnotations.staticRules = [
   '/packages/**':             ['permitAll'],
   '/public/**':               ['permitAll'],
   '/globalSearch/**':         ['ROLE_USER'],
+  '/home/**':                 ['ROLE_USER'],
   '/assets/**':               ['permitAll'],
   '/**/js/**':                ['permitAll'],
   '/**/css/**':               ['permitAll'],
@@ -607,6 +612,7 @@ grails.plugin.springsecurity.controllerAnnotations.staticRules = [
   '/api/checkUpdate':         ['permitAll'],
   '/api/isUp':                ['permitAll'],
   '/api/userData':            ['permitAll'],
+  '/integration/**':          ['ROLE_SUPERUSER', 'IS_AUTHENTICATED_FULLY'],
   '/user/**':                 ['ROLE_SUPERUSER', 'IS_AUTHENTICATED_FULLY'],
   '/role/**':                 ['ROLE_SUPERUSER', 'IS_AUTHENTICATED_FULLY'],
   '/securityInfo/**':         ['ROLE_SUPERUSER', 'IS_AUTHENTICATED_FULLY'],
@@ -616,7 +622,8 @@ grails.plugin.springsecurity.controllerAnnotations.staticRules = [
   '/aclObjectIdentity/**':    ['ROLE_SUPERUSER', 'IS_AUTHENTICATED_FULLY'],
   '/aclEntry/**':             ['ROLE_SUPERUSER', 'IS_AUTHENTICATED_FULLY'],
   '/oai':                     ['permitAll'],
-  '/oai/**':                  ['permitAll']
+  '/oai/**':                  ['permitAll'],
+  '/coreference/**':          ['permitAll']
 ]
 
 
@@ -978,6 +985,13 @@ globalSearchTemplates = [
           qparam:'qp_name',
           placeholder:'Package Name',
           contextTree:['ctxtp':'qry', 'comparator' : 'ilike', 'prop':'name', 'wildcard':'B', normalise:false]
+        ],
+        [
+          prompt:'Identifier',
+          qparam:'qp_identifier',
+          placeholder:'Identifier Value',
+          contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'ids.value'],
+          hide:false
         ],
         [
           type:'lookup',
@@ -1624,24 +1638,24 @@ globalSearchTemplates = [
           contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'publisher'],
           hide:true
         ],
-	[
-	  type:'lookup',
-	  baseClass:'org.gokb.cred.Person',
-	  prompt:'Person',
-	  qparam:'qp_person',
-	  placeholder:'Person',
-	  contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'people.person'],
-	  hide:true
-	],
-	[
-	  type:'lookup',
-	  baseClass:'org.gokb.cred.Subject',
-	  prompt:'Subject',
-	  qparam:'qp_subject',
-	  placeholder:'Subject',
-	  contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'subjects.subject'],
-	  hide:true
-	],
+        [
+          type:'lookup',
+          baseClass:'org.gokb.cred.Person',
+          prompt:'Person',
+          qparam:'qp_person',
+          placeholder:'Person',
+          contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'people.person'],
+          hide:true
+        ],
+        [
+          type:'lookup',
+          baseClass:'org.gokb.cred.Subject',
+          prompt:'Subject',
+          qparam:'qp_subject',
+          placeholder:'Subject',
+          contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'subjects.subject'],
+          hide:true
+        ],
         [
           type:'lookup',
           baseClass:'org.gokb.cred.Org',
@@ -1937,28 +1951,25 @@ beans {
 //     'My-Custom-Header': 'some value'
 
 // Uncomment and edit the following lines to start using Grails encoding & escaping improvements
-
-/* remove this line
  // GSP settings
- grails {
- views {
- gsp {
- encoding = 'UTF-8'
- htmlcodec = 'xml' // use xml escaping instead of HTML4 escaping
- codecs {
- expression = 'html' // escapes values inside null
- scriptlet = 'none' // escapes output from scriptlets in GSPs
- taglib = 'none' // escapes output from taglibs
- staticparts = 'none' // escapes output from static template parts
- }
- }
- // escapes all not-encoded output at final stage of outputting
- filteringCodecForContentType {
- //'text/html' = 'html'
- }
- }
- }
- remove this line */
+// grails {
+//  views {
+//   gsp {
+//     encoding = 'UTF-8'
+//     htmlcodec = 'xml' // use xml escaping instead of HTML4 escaping
+//     codecs {
+//       expression = 'html' // escapes values inside null
+//       scriptlet = 'none' // escapes output from scriptlets in GSPs
+//       taglib = 'none' // escapes output from taglibs
+//       staticparts = 'none' // escapes output from static template parts
+//     }
+//   }
+//   // escapes all not-encoded output at final stage of outputting
+//   filteringCodecForContentType {
+//   //'text/html' = 'html'
+//   }
+//  }
+// }
 
 
 // Added by the Audit-Logging plugin:
