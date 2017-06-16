@@ -169,6 +169,8 @@ class KBartValidationController {
     def row_report = [:]
     checkRowDatatypes(row_report,nl, header_map,rownum,file_columns)
 
+    checkRowIdentifierSemantics(row_report,nl, header_map,rownum,file_columns)
+
     switch( row_report.status ) {
       case 'WARN':
         result.globalReports.warnRowCount++;
@@ -243,6 +245,64 @@ class KBartValidationController {
       }
       idx++
     }
+  }
+
+  private void checkRowIdentifierSemantics(row_report,nl, header_map,rownum,file_columns) {
+    // 1. check that we can look up the identifiers - if both print and electronic are supplied, make sure that they 
+    // match a common work
+  
+    def print_identifier_value = getValueIfPresent(nl,header_map,'print_identifier')
+    def online_identifier_value = getValueIfPresent(nl,header_map,'online_identifier')
+
+    def print_identifier = print_identifier_value ? Identifier.executeQuery('select i from Identifier as i where i.value = ?',[print_identifier_value]) : null
+    def online_identifier = online_identifier_value ? Identifier.executeQuery('select i from Identifier as i where i.value = ?',[online_identifier_value]) : null
+
+    
+    if ( ( print_identifier_value != null ) && ( online_identifier_value != null ) ) {
+      // Check that the print and the online identifier match
+      if ( ( print_identifier.size() == 1 ) && ( online_identifier.size() == 1 )  ) {
+      }
+      else {
+        row_report.status = 'WARN'
+        row_report.messages.add("Unable to locate one or more of the supplied identifiers(${print_identifier_value} ${online_identifier_value}). The value might just be missing from GOKb, although this is unlikely");
+        row_report.errcount++;
+      }
+    }
+    else if ( print_identifier_value != null ) {
+      if ( print_identifier.size() == 1 ) {
+      }
+      else {
+        row_report.status = 'WARN'
+        row_report.messages.add("Unable to locate value given for print identifier ${print_identifier_value}. The value might just be missing from GOKb, although this is unlikely");
+        row_report.errcount++;
+      }
+    }
+    else if ( online_identifier_value != null ) {
+      if ( online_identifier.size() == 1 ) {
+      }
+      else {
+        row_report.status = 'WARN'
+        row_report.messages.add("Unable to locate value given for online identifier ${online_identifier_value}. The value might just be missing from GOKb, although this is unlikely");
+        row_report.errcount++;
+      }
+    }
+    else {
+      row_report.status = 'ERROR'
+      row_report.messages.add("Row has no usable identifier");
+      row_report.errcount++;
+    }
+
+    // 2. Check that the dates match any available date range for the title identified
+  }
+
+  private def getValueIfPresent(nl,header_map,fld) {
+    def result = null;
+    if ( header_map[fld] != null ) {
+      if ( header_map[fld].idx != null ) {
+        result = nl[header_map[fld].idx]
+      }
+    }
+    result
   }
 
   private File copyUploadedFile(inputfile, deposit_token) {
