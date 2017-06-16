@@ -27,8 +27,32 @@
 
   <pre>
     ${globalReports}
-    ${rowReports}
   </pre>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Row</th>
+        <th>Error count</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      <g:each in="${rowReports}" var="row">
+        <tr>
+          <td>${row.rownum}</td>
+          <td>${row.errcount}</td>
+          <td>
+            <ul>
+              <g:each in="${row.messages}" var="msg">
+                <li>${msg}</li>
+              </g:each>
+            </ul>
+          </td>
+        </tr>
+      </g:each>
+    </tbody>
+  </table>
 
   </body>
 </html>

@@ -53,6 +53,7 @@ class KBartValidationController {
       columnCount:0,
       kbartColumnCount:0,
       otherColumnCount:0,
+      rowsWithColumnsBeyondHeader:0,
       errorRowCount:0,
       messages:[]
     ]
@@ -145,7 +146,7 @@ class KBartValidationController {
       log.debug("Processing content line : ${nl}");
       rowctr ++
       try {
-        proceed &= validateRow(nl, header_map, result, rowctr);
+        proceed &= validateRow(nl, header_map, result, rowctr, file_columns);
         // if (nl.length >= col_positions.size() && cleanData (nl[col_positions.'name']) ) {
         // }
       }
@@ -157,9 +158,91 @@ class KBartValidationController {
     result;
   }
 
-  private void validateRow(nl, header_map, result, rownum) {
+  private void validateRow(nl, header_map, result, rownum, file_columns) {
     log.debug("Validate row ${nl}");
-    result.globalReports.validRowCount++;
+
+    if ( nl.length > file_columns.size() ) {
+      // Row seems to have more columns than header, probably nothing, but warn
+      result.globalReports.rowsWithColumnsBeyondHeader++
+    }
+
+    def row_report = [:]
+    checkRowDatatypes(row_report,nl, header_map,rownum,file_columns)
+
+    switch( row_report.status ) {
+      case 'WARN':
+        result.globalReports.warnRowCount++;
+        result.rowReports.add(row_report);
+        break;
+      case 'ERROR':
+        result.globalReports.errorRowCount++;
+        result.rowReports.add(row_report);
+        break;
+      case 'OK':
+      default:
+        result.globalReports.validRowCount++;
+        break;
+    }
+  }
+
+  private void checkRowDatatypes(row_report,nl, header_map,rownum,file_columns) {
+
+    row_report.status = 'OK';
+    row_report.messages = []
+    row_report.rownum = rownum;
+    row_report.errcount = 0;
+    def idx = 0;
+    nl.each { colval ->
+      def col_name = file_columns.get(idx)
+      def col_cfg = header_map[col_name]
+      switch ( col_cfg.type ) {
+        case 'string':
+          break;
+        case 'isodate':
+          try {
+            if ( colval.length() == 10 ) {
+              def date_components = colval.split('-');
+              if ( date_components.length == 3 ) {
+                if ( ( date_components[0].length() == 4 ) &&
+                     ( date_components[1].length() == 2 ) &&
+                     ( date_components[2].length() == 2 ) ) {
+                  def sdf = new java.text.SimpleDateFormat('yyyy-MM-dd')
+                  def parsed_date = sdf.parse(colval)
+                  log.debug("Parsed date ${colval} as ${parsed_date}");
+                }
+                else {
+                  row_report.status = 'ERROR'
+                  row_report.errcount++;
+                  row_report.messages.add("expected ISO date in field ${col_name} at column position ${idx} with value ${colval} to be formatted YYYY-MM-DD");
+                }
+              }
+              else {
+                row_report.status = 'ERROR'
+                row_report.errcount++;
+                row_report.messages.add("expected ISO date in field ${col_name} at column position ${idx} with value ${colval} to be composed of 3 parts but found ${date_components.length}. Dates should be formatted YYYY-MM-DD");
+              }
+            }
+            else {
+              row_report.status = 'ERROR'
+              row_report.errcount++;
+              row_report.messages.add("expected ISO date in field ${col_name} at column position ${idx} with value ${colval} to have length 10, but it is length ${colval.length()}. Dates should be formatted YYYY-MM-DD");
+            }
+          }
+          catch ( Exception e ) {
+            row_report.status = 'ERROR'
+            row_report.errcount++;
+            row_report.messages.add("Unable to parse ISO date in field ${col_name} at column position ${idx} with value ${colval}. Dates should be formatted YYYY-MM-DD");
+            row_report.messages.add(e.getMessage());
+          }
+          break;
+        case 'ISO8601':
+          break;
+        default:
+          log.debug("No type for column ${col_name}");
+          break;
+      }
+      idx++
+    }
   }
 
   private File copyUploadedFile(inputfile, deposit_token) {
