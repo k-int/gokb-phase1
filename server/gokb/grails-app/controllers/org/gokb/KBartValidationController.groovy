@@ -45,7 +45,17 @@ class KBartValidationController {
     def result = [:]
     log.debug("KBartValidationController::validateKbart");
 
-    result.globalReports = []
+    result.globalReports = [
+      overallResult:'pass',
+      validRowCount:0,
+      warnRowCount:0,
+      errorRowCount:0,
+      columnCount:0,
+      kbartColumnCount:0,
+      otherColumnCount:0,
+      errorRowCount:0,
+      messages:[]
+    ]
     result.rowReports = []
 
     char del = '\t'
@@ -55,7 +65,7 @@ class KBartValidationController {
 
     String [] nl = r.readNext()
     def header_map = [
-      'publication_title' : [type:'string'],
+      'publication_title' : [type:'string', mandatory:true],
       'print_identifier': [type:'string'],
       'online_identifier': [type:'string'],
       'date_first_issue_online': [type:'isodate'],
@@ -72,9 +82,9 @@ class KBartValidationController {
       'notes': [type:'string'],
       'publisher_name': [type:'string'],
       'publication_type': [type:'string', constrained:['serial','monograph']],
-      'date_monograph_published_print ': [type:'string'],
-      'date_monograph_published_online ': [type:'string'],
-      'monograph_volume ': [type:'string'],
+      'date_monograph_published_print': [type:'string'],
+      'date_monograph_published_online': [type:'string'],
+      'monograph_volume': [type:'string'],
       'monograph_edition': [type:'string'],
       'first_editor': [type:'string'],
       'parent_publication_title_id': [type:'string'],
@@ -84,28 +94,44 @@ class KBartValidationController {
 
     // Test # 1 - The first row must be the header and define at least the minimum set of KBART mandatory fields
     log.debug("Processing header line : ${nl}");
+    log.debug("header map keys : ${header_map.keySet()}");
 
     int rowctr = 0
     def ret = [:]
 
     boolean proceed = true;
+    def file_columns = []
 
-    // Check that header_row contains at least the mandatory columns
     int header_counter = 0;
     nl.each { hdr ->
-      if ( header_map[hdr.toLowerCase()] == null ) 
-        header_map[hdr.toLowerCase()] = [ idx: header_counter++ ]
-      else 
-        header_map[hdr.toLowerCase()].idx = header_counter++
+      def cleaned_column_name = hdr.toLowerCase().trim()
+      log.debug("Check column: ${cleaned_column_name}");
+      result.globalReports.columnCount++
+      if ( header_map.keySet().contains(cleaned_column_name) ) {
+        header_map[cleaned_column_name].idx = header_counter++
+        result.globalReports.kbartColumnCount++
+      }
+      else {
+        log.debug("Register unknown column ${cleaned_column_name}");
+        header_map[cleaned_column_name] = [idx:header_counter++]
+        result.globalReports.messages.add( [ type:'info', message:'Detected non KBART field in header: '+hdr+'('+cleaned_column_name+') (this is valid, message for information only)'] )
+        result.globalReports.otherColumnCount++
+      }
 
+      // note down which mapping we are using at this column index for easy note later on
+      file_columns.add(cleaned_column_name);
     }
 
     log.debug("header map: ${header_map}");
 
-    [ 'publication_title' ].each { mandatory_column_name ->
+    // Check that header_row contains at least the mandatory columns
+    def mandatory_fields = header_map.findAll { it.value.mandatory == true }.collect{it.key}
+    log.debug("Check mandatory fields : ${mandatory_fields}");
+    mandatory_fields.each { mandatory_column_name ->
       if ( ! header_map.keySet().contains(mandatory_column_name) ) {
-        result.globalReports.add( [ type:'error', message:'Missing mandatory column: '+mandatory_column_name +'(Test is case insensitive)'] )
+        result.globalReports.messages.add( [ type:'error', message:'Missing mandatory column: '+mandatory_column_name +'(Test is case insensitive)'] )
         proceed = false;
+        result.globalReports.overallResult='fail'
       }
     }
 
@@ -133,6 +159,7 @@ class KBartValidationController {
 
   private void validateRow(nl, header_map, result, rownum) {
     log.debug("Validate row ${nl}");
+    result.globalReports.validRowCount++;
   }
 
   private File copyUploadedFile(inputfile, deposit_token) {

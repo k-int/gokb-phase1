@@ -11,7 +11,7 @@
 
     <div id="mainarea" class="panel panel-default">
       <div class="panel-body">
-        <g:form action="validate" method="post" enctype="multipart/form-data" params="${params}">
+        <g:form action="validate" method="post" enctype="multipart/form-data">
            <div class="input-group">
             <input type="file" name="kbart_file" id="kbart_file" class="form-control" value="${params.kbart_file}" placeholder="Upload KBART File..." />
             <span class="input-group-btn">
