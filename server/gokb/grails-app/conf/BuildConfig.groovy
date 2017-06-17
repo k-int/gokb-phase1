@@ -71,10 +71,14 @@ grails.project.dependency.resolution = {
         runtime 'org.apache.tika:tika-parsers:1.6'
         
 
-        runtime 'org.elasticsearch:elasticsearch:2.1.1'
-        runtime ('org.elasticsearch:elasticsearch-groovy:2.1.1') {
-          excludes "org.codehaus.groovy:groovy-all"
-        }
+        // migrate to es 5.2
+        compile 'org.elasticsearch:elasticsearch:5.2.0'
+        compile 'org.elasticsearch.client:transport:5.2.0'
+
+        // runtime 'org.elasticsearch:elasticsearch:2.1.1'
+        // runtime ('org.elasticsearch:elasticsearch-groovy:2.1.1') {
+        //   excludes "org.codehaus.groovy:groovy-all"
+        // }
 
         // runtime ('org.elasticsearch:elasticsearch:1.7.1')
         // runtime ('org.elasticsearch:elasticsearch-groovy:1.7.0') {

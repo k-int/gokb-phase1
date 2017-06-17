@@ -206,12 +206,7 @@ class FTUpdateService {
           def recid = idx_record['_id'].toString()
           idx_record.remove('_id');
 
-          def future = esclient.indexAsync {
-            index 'gokb'
-            type 'component'
-            id recid
-            source idx_record
-          }
+          def future = ESWrapperService.index( 'gokb',  'component', recid, idx_record );
 
           // future.actionGet()
           // log.debug("Index completed -- ${recid}");
