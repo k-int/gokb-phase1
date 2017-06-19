@@ -1,9 +1,13 @@
-package com.k_int.hiberate;
+package com.k_int.hibernate;
  
+// Converting from Grails3/Hibernate5 to Grails2/Hibernate3, no org.hibernate.dialect.PostgreSQL81Dialect
+// org.hibernate.engine.Mapping org.hibernate.engine.SessionFactoryImplementor are in org.hibernate.engine.spi in G3/H5.
+// this file modified for G2/H3
+
 import org.hibernate.QueryException;
 import org.hibernate.dialect.function.SQLFunction;
-import org.hibernate.engine.spi.Mapping;
-import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.engine.Mapping;
+import org.hibernate.engine.SessionFactoryImplementor;
 import org.hibernate.type.BooleanType;
 import org.hibernate.type.Type;
  

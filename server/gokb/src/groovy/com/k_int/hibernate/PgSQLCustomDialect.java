@@ -1,8 +1,13 @@
 package com.k_int.hibernate;
 
-import org.hibernate.dialect.PostgreSQL81Dialect;
+import com.k_int.hibernate.PgFullTextSearchFunction;
 
-public class PgSQLCustomDialect extends PostgreSQL81Dialect {
+// Converting from Grails3/Hibernate5 to Grails2/Hibernate3, no org.hibernate.dialect.PostgreSQL81Dialect
+// import org.hibernate.dialect.PostgreSQL81Dialect;
+
+import org.hibernate.dialect.PostgreSQLDialect;
+
+public class PgSQLCustomDialect extends PostgreSQLDialect {
  
   public PgSQLCustomDialect() {
     registerFunction("textSearch", new PgFullTextSearchFunction());
