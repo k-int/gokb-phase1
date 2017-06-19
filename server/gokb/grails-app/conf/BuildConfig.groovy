@@ -75,6 +75,11 @@ grails.project.dependency.resolution = {
         compile 'org.elasticsearch:elasticsearch:5.2.0'
         compile 'org.elasticsearch.client:transport:5.2.0'
 
+        // log4j deps for es5 above
+        compile 'org.apache.logging.log4j:log4j-api:2.7'
+        compile 'org.apache.logging.log4j:log4j-core:2.7'
+
+
         // runtime 'org.elasticsearch:elasticsearch:2.1.1'
         // runtime ('org.elasticsearch:elasticsearch-groovy:2.1.1') {
         //   excludes "org.codehaus.groovy:groovy-all"
