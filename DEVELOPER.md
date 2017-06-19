@@ -25,6 +25,46 @@ Connect with
 
 psql -h localhost -U knowint gokb
 
+## Config
+
+mkdir ~/.grails/gokb-config.groovy
+
+
+With contents --LIKE-- ::
+
+kuali.analytics.code="xxx"
+grails.plugins.springsecurity.ui.forgotPassword.emailFrom='user@host'
+grails.plugins.springsecurity.ui.register.emailFrom = 'user@host'
+grails.plugins.springsecurity.ui.forgotPassword.emailSubject = 'GoKB Forgotten Password'
+gokb.theme='spacelab'  // spacelab,cosmo,cyborg,yeti
+gokb.es.cluster='elasticsearch'
+serverUrl='https://host/gokb'
+
+grails {
+  mail {
+    host = "smtp.gmail.com"
+    port = 465
+    username = "username"
+    password = "password"
+    props = ["mail.smtp.auth":"false",
+             "mail.smtp.socketFactory.port":"465",
+             "mail.smtp.socketFactory.class":"javax.net.ssl.SSLSocketFactory",
+             "mail.smtp.socketFactory.fallback":"false"]
+  }
+}
+
+searchApi = [
+  'path'        : '/es/',
+  'indices'     : 'gokb',
+  'types'       : 'component',
+  'typingField' : 'componentType',
+  'port'        : 443
+]
+
+newDash=false
+decisionSupport=true
+
+
 
 # Testing
 
