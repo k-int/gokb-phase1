@@ -42,8 +42,8 @@ class KBartValidationController {
 
     withFormat {
       html result
-      json { render api_response as JSON }
-      xml { render api_response as XML }
+      json { render result as JSON }
+      xml { render result as XML }
     }
 
   }
