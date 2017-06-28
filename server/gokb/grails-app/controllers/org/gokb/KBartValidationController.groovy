@@ -39,6 +39,13 @@ class KBartValidationController {
     }
     else {
     }
+
+    withFormat {
+      html result
+      json { render api_response as JSON }
+      xml { render api_response as XML }
+    }
+
   }
 
   private validateKbart(kbart_file) {
