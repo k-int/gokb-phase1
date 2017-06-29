@@ -29,7 +29,7 @@
     ${globalReports}
   </pre>
 
-  <table>
+  <table class="table table-bordered table-striped">
     <thead>
       <tr>
         <th>Row</th>
