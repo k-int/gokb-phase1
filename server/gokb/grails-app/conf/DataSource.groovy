@@ -22,8 +22,8 @@ environments {
             dialect = org.hibernate.dialect.PostgreSQLDialect
             defaultTransactionIsolation = java.sql.Connection.TRANSACTION_READ_COMMITTED
             pooled = true
-            logSql = true
-            formatSql = true
+            logSql = false
+            formatSql = false
             configClass = 'com.k_int.KIGormConfiguration'
             properties {
                 maxActive = 500
