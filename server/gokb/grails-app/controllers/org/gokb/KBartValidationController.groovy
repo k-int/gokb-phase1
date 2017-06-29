@@ -19,39 +19,6 @@ class KBartValidationController {
 
     def result = [:];
 
-    log.debug("KBartValidationController::validate");
-
-    if ( request.method == 'POST' ) {
-      try {
-        def temp_file
-        def upload_file = request.getFile("kbart_file")
-        def upload_mime_type = upload_file?.contentType
-        def upload_filename = upload_file?.getOriginalFilename()
-        def name_of_kbart_file_to_validate = java.util.UUID.randomUUID().toString();
-        temp_file = copyUploadedFile(upload_file, name_of_kbart_file_to_validate);
-
-        // Validate kbart temp_file
-        result = validateKbart(temp_file);
-      }
-      catch ( Exception e ) {
-        log.debug("Problem",e);
-      }
-    }
-    else {
-    }
-
-    withFormat {
-      html result
-      json { render result as JSON }
-      xml { render result as XML }
-    }
-
-  }
-
-  private validateKbart(kbart_file) {
-    def result = [:]
-    log.debug("KBartValidationController::validateKbart");
-
     result.globalReports = [
       overallResult:'pass',
       validRowCount:0,
@@ -65,6 +32,39 @@ class KBartValidationController {
       messages:[]
     ]
     result.rowReports = []
+
+    log.debug("KBartValidationController::validate");
+
+    if ( request.method == 'POST' ) {
+      try {
+        def temp_file
+        def upload_file = request.getFile("kbart_file")
+        def upload_mime_type = upload_file?.contentType
+        def upload_filename = upload_file?.getOriginalFilename()
+        def name_of_kbart_file_to_validate = java.util.UUID.randomUUID().toString();
+        temp_file = copyUploadedFile(upload_file, name_of_kbart_file_to_validate);
+
+        // Validate kbart temp_file
+        result = validateKbart(result,emp_file);
+      }
+      catch ( Exception e ) {
+        log.error("Problem processing validation result",e);
+        result.globalReports.messages.add("Problem validating file: ${e.message}");
+      }
+    }
+    else {
+    }
+
+    withFormat {
+      html result
+      json { render result as JSON }
+      xml { render result as XML }
+    }
+
+  }
+
+  private validateKbart(result,kbart_file) {
+    log.debug("KBartValidationController::validateKbart");
 
     char del = '\t'
     char quote = '"'
