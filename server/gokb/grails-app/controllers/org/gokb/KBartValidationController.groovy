@@ -45,7 +45,7 @@ class KBartValidationController {
         temp_file = copyUploadedFile(upload_file, name_of_kbart_file_to_validate);
 
         // Validate kbart temp_file
-        result = validateKbart(result,emp_file);
+        result = validateKbart(result,temp_file);
       }
       catch ( Exception e ) {
         log.error("Problem processing validation result",e);
