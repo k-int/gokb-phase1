@@ -28,7 +28,13 @@
     <div class="row">
       <h2>This tool will validate an uploaded KBART file according to the following rules</h2>
       <p>
-        This tool was developed against the KBART guidelines as set out here: http://www.niso.org/apps/group_public/download.php/16900/RP-9-2014_KBART.pdf
+        This tool was developed against the KBART guidelines as set out here: <a href="http://www.niso.org/apps/group_public/download.php/16900/RP-9-2014_KBART.pdf">http://www.niso.org/apps/group_public/download.php/16900/RP-9-2014_KBART.pdf</a>
+      </p>
+      <p>
+        if you prefer, the service can be called in API mode. For example, to use CURL (Using a test file downloaded from : <a href="https://github.com/k-int/gokb-phase1/tree/folio_codex_dev/testdata/KBART">https://github.com/k-int/gokb-phase1/tree/folio_codex_dev/testdata/KBART</a>
+        <pre>
+          curl -X POST -F kbart_file=@./GOKB_test_invalid_2017-06-16.txt http://libsdev.k-int.com/gokb/KBartValidation/validate
+        </pre>
       </p>
       <table class="table table-striped">
         <thead>
