@@ -20,6 +20,7 @@ class KBartValidationController {
     def result = [:];
 
     result.globalReports = [
+      filenameInfo:[:],
       overallResult:'pass',
       validRowCount:0,
       warnRowCount:0,
@@ -45,7 +46,7 @@ class KBartValidationController {
         temp_file = copyUploadedFile(upload_file, name_of_kbart_file_to_validate);
 
         // Validate kbart temp_file
-        result = validateKbart(result,temp_file);
+        result = validateKbart(result,upload_filename,temp_file);
       }
       catch ( Exception e ) {
         log.error("Problem processing validation result",e);
@@ -63,11 +64,23 @@ class KBartValidationController {
 
   }
 
-  private validateKbart(result,kbart_file) {
+  private validateKbart(result,upload_filename,kbart_file) {
     log.debug("KBartValidationController::validateKbart");
 
     char del = '\t'
     char quote = '"'
+
+    // Validate the upload filename
+    String[] upload_filename_components = upload_filename.split('_')
+    if ( upload_filename_components.length == 4 ) {
+      result.globalReports.filenameInfo['providerName'] = upload_filename_components[0]
+      result.globalReports.filenameInfo['region'] = upload_filename_components[1]
+      result.globalReports.filenameInfo['package'] = upload_filename_components[2]
+      result.globalReports.filenameInfo['datestr'] = upload_filename_components[3]
+    }
+    else {
+      result.globalReports.messages.add("Expected 4 components in uploaded filename (Separated by _) but found ${upload_filename_components.length}. Unable to extract Provider Name / Region/Consortium / Package Name / Date");
+    }
 
     def r = new CSVReader( new InputStreamReader(kbart_file.newInputStream(), 'UTF-8'), del, quote )
 
