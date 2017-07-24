@@ -987,6 +987,13 @@ globalSearchTemplates = [
           contextTree:['ctxtp':'qry', 'comparator' : 'ilike', 'prop':'name', 'wildcard':'B', normalise:false]
         ],
         [
+          prompt:'Identifier',
+          qparam:'qp_identifier',
+          placeholder:'Identifier Value',
+          contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'ids.value'],
+          hide:false
+        ],
+        [
           type:'lookup',
           baseClass:'org.gokb.cred.Org',
           prompt:'Provider',
@@ -1133,6 +1140,8 @@ globalSearchTemplates = [
         [heading:'Name/Title', property:'name', link:[controller:'resource',action:'show',id:'x.r?.class?.name+\':\'+x.r?.id'],sort:'name' ],
         [heading:'Type', property:'class?.simpleName'],
         [heading:'Status', property:'status.value',sort:'status'],
+        [heading:'Date Created', property:'dateCreated',sort:'dateCreated'],
+        [heading:'Last Updated', property:'lastUpdated',sort:'lastUpdated'],
       ]
     ]
   ],
@@ -1631,24 +1640,24 @@ globalSearchTemplates = [
           contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'publisher'],
           hide:true
         ],
-	      [
-	        type:'lookup',
-	        baseClass:'org.gokb.cred.Person',
-	        prompt:'Person',
-	        qparam:'qp_person',
-	        placeholder:'Person',
-	        contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'people.person'],
-	        hide:true
-	      ],
-	      [
-	        type:'lookup',
-	        baseClass:'org.gokb.cred.Subject',
-	        prompt:'Subject',
-	        qparam:'qp_subject',
-	        placeholder:'Subject',
-	        contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'subjects.subject'],
-	        hide:true
-	      ],
+        [
+          type:'lookup',
+          baseClass:'org.gokb.cred.Person',
+          prompt:'Person',
+          qparam:'qp_person',
+          placeholder:'Person',
+          contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'people.person'],
+          hide:true
+        ],
+        [
+          type:'lookup',
+          baseClass:'org.gokb.cred.Subject',
+          prompt:'Subject',
+          qparam:'qp_subject',
+          placeholder:'Subject',
+          contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'subjects.subject'],
+          hide:true
+        ],
         [
           type:'lookup',
           baseClass:'org.gokb.cred.Org',

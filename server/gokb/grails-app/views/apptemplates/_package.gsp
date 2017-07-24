@@ -23,6 +23,13 @@
     <dd>
       <g:manyToOneReferenceTypedown owner="${d}" field="source" baseClass="org.gokb.cred.Source">${d.source?.name}</g:manyToOneReferenceTypedown>
     </dd>
+    
+    <dt>
+      <g:annotatedLabel owner="${d}" property="status">Status</g:annotatedLabel>
+    </dt>
+    <dd>
+      ${d.status.value}
+    </dd>
 
     <g:if test="${d.lastProject}">
       <dt>
@@ -59,7 +66,7 @@
 
     <ul id="tabs" class="nav nav-tabs">
       <li class="active"><a href="#packagedetails" data-toggle="tab">Package Details</a></li>
-      <li><a href="#titledetails" data-toggle="tab">Titles <span class="badge badge-warning"> ${d.tipps?.size()} </span></a></li>
+      <li><a href="#titledetails" data-toggle="tab">TIPPs <span class="badge badge-warning"> ${d.tipps?.size()} </span></a></li>
       <li><a href="#identifiers" data-toggle="tab">Identifiers <span class="badge badge-warning"> ${d.ids?.size()} </span></a></li>      
       <li><a href="#altnames" data-toggle="tab">Alternate Names 
         <span class="badge badge-warning"> ${d.variantNames?.size()}</span>
@@ -143,11 +150,16 @@
               <tr>
                 <td>${h[1]}</td>
                 <td>${h[2]}</td>
-                <td>${h[0].title?.name}</td>
+                <td>${h[0].title?.name} (<g:link controller="resource" action="show" id="${h[0].getClassName()+':'+h[0].id}">TIPP ${h[0].id}</g:link>)</td>
               </tr>
             </g:each>
           </tbody>
         </table>
+      </div>
+      
+      <div class="tab-pane" id="review">
+        <g:render template="revreqtab" contextPath="../apptemplates"
+          model="${[d:d]}" />
       </div>
 
 
