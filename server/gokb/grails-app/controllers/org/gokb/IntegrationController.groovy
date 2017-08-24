@@ -116,7 +116,7 @@ class IntegrationController {
             if ( located_entries?.size() == 0 ) {
               log.debug("No match on normalised name ${normname}.. Trying variant names");
               def variant_normname = GOKbTextUtils.normaliseString( name )
-              located_entries = Org.executeQuery("select distinct o from Org as o join o.variantNames as v where v.normVariantName = ?",[variant_normname]);
+              located_entries = Org.executeQuery("select distinct o from Org as o join o.variantNames as v where v.normVariantName = ? and o.status.value <> 'Deleted'",[variant_normname]);
 
               if ( located_entries?.size() == 0 ) {
 
@@ -265,7 +265,7 @@ class IntegrationController {
           if ( located_or_new_org == null && org_by_name.size() == 0 ) {
 
             def variant_normname = GOKbTextUtils.normaliseString( orgName )
-            def candidate_orgs = Org.executeQuery("select distinct o from Org as o join o.variantNames as v where v.normVariantName = ?",[variant_normname]);
+            def candidate_orgs = Org.executeQuery("select distinct o from Org as o join o.variantNames as v where v.normVariantName = ? and o.status.value <> 'Deleted'",[variant_normname]);
 
             if(candidate_orgs.size() == 1){
               located_or_new_org = candidate_orgs[0]
@@ -742,7 +742,7 @@ class IntegrationController {
         def existing_tipps = []
 
         if ( the_pkg.tipps?.size() > 0 ) {
-          existing_tipps = the_pkg.tipps
+          existing_tipps = the_pkg.tipps.collect { it.id }
           log.debug("Matched package has ${the_pkg.tipps.size()} TIPPs")
         }
 
@@ -844,9 +844,9 @@ class IntegrationController {
 
               def upserted_tipp = TitleInstancePackagePlatform.upsertDTO(tipp)
 
-              if ( existing_tipps.size() > 0 && upserted_tipp && existing_tipps.contains(upserted_tipp) ) {
+              if ( existing_tipps.size() > 0 && upserted_tipp && existing_tipps.contains(upserted_tipp.id) ) {
                 log.debug("Existing TIPP matched!")
-                tipps_to_delete.remove(upserted_tipp)
+                tipps_to_delete.remove(upserted_tipp.id)
               }
             }
           }
@@ -856,14 +856,16 @@ class IntegrationController {
 
 
             tipps_to_delete.each { ttd ->
-
-              if ( ttd.isCurrent() ) {
+              
+              def to_retire = TitleInstancePackagePlatform.get(ttd)
+              
+              if ( to_retire.isCurrent() ) {
                 
-                ttd.deleteSoft()
-                ttd.save(failOnError: true)
+                to_retire.retire()
+                to_retire.save(failOnError: true)
 
 //                 ReviewRequest.raise(
-//                     ttd,
+//                     to_retire,
 //                     "TIPP retired.",
 //                     "An update to this package did not contain this TIPP.",
 //                     user
@@ -880,7 +882,7 @@ class IntegrationController {
               )
             }
           }
-          log.debug("Found ${num_deleted_tipps} TIPPS to delete from the matched package!")
+          log.debug("Found ${num_deleted_tipps} TIPPS to retire from the matched package!")
 
           log.debug("Elapsed tipp processing time: ${System.currentTimeMillis()-tipp_upsert_start_time} for ${tippctr} records")
         }
@@ -1227,9 +1229,9 @@ class IntegrationController {
         Org publisher = Org.findByNormname(norm_pub_name)
 
 
-        if(!publisher){
+        if(!publisher || publisher.status.value == 'Deleted'){
           def variant_normname = GOKbTextUtils.normaliseString(pub_to_add.name)
-          def candidate_orgs = Org.executeQuery("select distinct o from Org as o join o.variantNames as v where v.normVariantName = ?",[variant_normname]);
+          def candidate_orgs = Org.executeQuery("select distinct o from Org as o join o.variantNames as v where v.normVariantName = ? and o.status.value <> 'Deleted'",[variant_normname]);
 
           if(candidate_orgs.size() == 1){
             publisher = candidate_orgs[0]
