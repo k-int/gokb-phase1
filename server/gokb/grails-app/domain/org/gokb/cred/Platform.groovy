@@ -119,7 +119,7 @@ class Platform extends KBComponent {
 
     if ( ql ) { 
       ql.each { t ->
-        if( !params.status || t.status.value != params.status ){
+        if( !params.filter1 || t.status.value == params.filter1 ){
           result.add([id:"${t.class.name}:${t.id}",text:"${t.name}"])
         }
       }   
@@ -250,8 +250,11 @@ class Platform extends KBComponent {
         // skip = true
         def current_platforms = url_candidates.findAll { it.status == status_current }
 
-        if(current_platforms.size() > 0){
+        if(current_platforms.size() == 1){
           result = current_platforms[0]
+        }else{
+          log.debug("Could not decide on a Platform, skipping..")
+          skip = true;
         }
       }
     }

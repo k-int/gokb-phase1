@@ -23,13 +23,14 @@
     <dd>
       <g:manyToOneReferenceTypedown owner="${d}" field="source" baseClass="org.gokb.cred.Source">${d.source?.name}</g:manyToOneReferenceTypedown>
     </dd>
-    
-    <dt>
-      <g:annotatedLabel owner="${d}" property="status">Status</g:annotatedLabel>
-    </dt>
-    <dd>
-      ${d.status.value}
-    </dd>
+    <g:if test="${d.status}">
+      <dt>
+        <g:annotatedLabel owner="${d}" property="status">Status</g:annotatedLabel>
+      </dt>
+      <dd>
+        ${d.status.value}
+      </dd>
+    </g:if>
 
     <g:if test="${d.lastProject}">
       <dt>
@@ -95,7 +96,7 @@
 
       <div class="tab-pane" id="titledetails">
         <g:link class="display-inline" controller="search" action="index"
-          params="[qbe:'g:3tipps', qp_pkg_id:d.id, hide:['qp_pkg_id', 'qp_cp', 'qp_pkg', 'qp_pub_id', 'qp_plat', 'qp_status']]"
+          params="[qbe:'g:3tipps', qp_pkg_id:d.id, hide:['qp_pkg_id', 'qp_cp', 'qp_pkg', 'qp_pub_id', 'qp_plat']]"
           id="">Titles in this package</g:link>
 
         <g:if test="${ editable }">
@@ -130,6 +131,8 @@
                                 model="${[d:d, property:'ids', cols:[
                   [expr:'toComponent.namespace.value', colhead:'Namespace'],
                   [expr:'toComponent.value', colhead:'ID', action:'link']]]}" />
+                  
+        <g:render template="addIdentifier" contextPath="../apptemplates" model="${[d:d, hash:'#identifiers']}"/>
       </div>
 
       <div class="tab-pane" id="ds">
