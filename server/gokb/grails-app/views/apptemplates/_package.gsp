@@ -131,8 +131,6 @@
                                 model="${[d:d, property:'ids', cols:[
                   [expr:'toComponent.namespace.value', colhead:'Namespace'],
                   [expr:'toComponent.value', colhead:'ID', action:'link']]]}" />
-                  
-        <g:render template="addIdentifier" contextPath="../apptemplates" model="${[d:d, hash:'#identifiers']}"/>
       </div>
 
       <div class="tab-pane" id="ds">

@@ -353,14 +353,15 @@
 
     </div>
 
-    <div class="tab-pane" id="identifiers">
+
     <div class="tab-pane" id="identifiers">
       <g:render template="simpleCombos" contextPath="../apptemplates"
         model="${[d:d, property:'ids', fragment:'identifiers', cols:[
                   [expr:'namespace.value', colhead:'Namespace'],
                   [expr:'value', colhead:'ID', action:'link']]]}" />
+      <g:render template="addIdentifier" contextPath="../apptemplates" model="${[d:d, hash:'#identifiers']}"/>
     </div>
-    </div>
+
 
     <div class="tab-pane" id="addprops">
       <g:render template="addprops" contextPath="../apptemplates"
