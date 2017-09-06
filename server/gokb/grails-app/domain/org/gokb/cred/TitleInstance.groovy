@@ -216,7 +216,8 @@ class TitleInstance extends KBComponent {
   static def oaiConfig = [
     id:'titles',
     textDescription:'Title repository for GOKb',
-    query:" from TitleInstance as o",
+    query:" from TitleInstance as o ",
+    statusFilter:"where o.status.value != 'Expected'",
     pageSize:20
   ]
 
@@ -503,12 +504,12 @@ class TitleInstance extends KBComponent {
   }
 
   @Transient
-  public static TitleInstance upsertDTO(titleLookupService,titleDTO) {
+  public static TitleInstance upsertDTO(titleLookupService,titleDTO,user=null) {
     def result = null;
     result = titleLookupService.find(titleDTO.name,
                                      titleDTO.publisher,
                                      titleDTO.identifiers,
-                                     null,
+                                     user,
                                      null,
                                      titleDTO.type=='Serial' ? 'org.gokb.cred.JournalInstance' : 'org.gokb.cred.BookInstance' )
 
