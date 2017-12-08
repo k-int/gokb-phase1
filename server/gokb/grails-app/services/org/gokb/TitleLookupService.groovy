@@ -213,7 +213,6 @@ class TitleLookupService {
             the_title = clazz.newInstance()
             the_title.name = metadata.title
             the_title.normname = KBComponent.generateNormname(metadata.title);
-            // the_title.status = 
             // the_title.editStatus = 
             the_title.ids = []
           }
@@ -283,7 +282,7 @@ class TitleLookupService {
         
         // We should raise a review request here if the match was made by cross checking
         // different identifier namespaces.
-        if (results['x_check_matches'].size() == 1) {
+        if (results['x_check_matches'].size() == 1 && results['x_check_matches'][0]['suppliedNS'] != 'issnl') {
           
           def data = results['x_check_matches'][0]
           
@@ -322,14 +321,15 @@ class TitleLookupService {
 //         }
         
         // Take whatever we can get if what we have is an unknown title
-        if ( metadata.title.startsWith("Unknown Title") ) {
+        if ( metadata.title.startsWith("Unknown Title") || metadata.status == "Expected" ) {
           // Don't go through title matching if we don't have a real title
           the_title = matches[0]
         }
         else {
-          if ( matches[0].name.startsWith("Unknown Title") ) {
+          if ( matches[0].name.startsWith("Unknown Title") || metadata.status == "Expected" ) {
             // If we have an unknown title in the db, and a real title, then take that
-            // in preference 
+            // in preference
+            log.debug("Found new Title ${metadata.name} for previously unknown title ${matches[0]} (${matches[0].name})")
             the_title = matches[0]
             the_title.name = metadata.title
             the_title.status = RefdataCategory.lookupOrCreate('KBComponent.Status', 'Current')
@@ -465,6 +465,10 @@ class TitleLookupService {
 
       // Make sure we're all saved before looking up the publisher
       the_title.save(flush:true, failOnError:true);
+      
+      if(the_title.name.startsWith("Unknown Title")){
+        the_title.status = RefdataCategory.lookupOrCreate(KBComponent.RD_STATUS, 'Expected')
+      }
 
       // Add the publisher.
       addPublisher(metadata.publisher_name, the_title, user, project)
