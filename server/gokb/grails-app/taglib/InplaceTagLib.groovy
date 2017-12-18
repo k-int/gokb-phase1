@@ -17,6 +17,8 @@ class InplaceTagLib {
     // See if there is an owner attribute on the request - owner will be the domain object asking to be edited.
     def owner = attrs.owner ? ClassUtils.deproxy(attrs.owner) : null
     
+    // If request.curator is null then we should use any value we find, however if it is set, we should
+    // honour it's semantics.
     boolean cur = request.curator != null ? request.curator.size() > 0 : true
     
     // Default editable value.
