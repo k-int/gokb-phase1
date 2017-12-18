@@ -2,7 +2,10 @@ package org.gokb.cred
 
 import javax.persistence.Transient
 import groovy.util.logging.Log4j
+import org.gokb.GOKbTextUtils
+import org.gokb.DomainClassExtender
 import com.k_int.ClassUtils
+import groovy.time.TimeCategory
 
 
 import org.gokb.refine.*
@@ -102,6 +105,28 @@ class Package extends KBComponent {
     }
 
     result
+  }
+
+  @Transient
+  public getTitles() {
+
+    def refdata_deleted = RefdataCategory.lookupOrCreate('KBComponent.Status','Deleted');
+    def refdata_retired = RefdataCategory.lookupOrCreate('KBComponent.Status','Retired');
+
+    def all_titles = TitleInstancePackagePlatform.executeQuery('''select distinct title
+        from TitleInstance as title,
+          Combo as pkgCombo,
+          Combo as titleCombo,
+          TitleInstancePackagePlatform as tipp
+        where pkgCombo.toComponent=tipp
+          and pkgCombo.fromComponent=?
+          and titleCombo.toComponent=tipp
+          and titleCombo.fromComponent=title
+          and tipp.status != ?
+          and title.status != ?'''
+          ,[this,refdata_retired,refdata_deleted]);
+
+    return all_titles;
   }
   
   private static OAI_PKG_CONTENTS_QRY = '''
@@ -213,7 +238,8 @@ select tipp.id,
   static def oaiConfig = [
     id:'packages',
     textDescription:'Package repository for GOKb',
-    query:" from Package as o where o.status.value != 'Deleted'",
+    query:" from Package as o ",
+    statusFilter:"where o.status.value != 'Deleted'",
     pageSize:3
   ]
 
@@ -263,7 +289,7 @@ select tipp.id,
         'paymentType' ( paymentType?.value )
         'global' ( global?.value )
         'nominalPlatform' ( nominalPlatform?.name )
-        'nominalProvider' ( nominalPlatform?.provider?.name )
+        'nominalProvider' ( provider?.name )
         'listVerifier' ( listVerifier )
         'userListVerifier' ( userListVerifier?.username )
         'listVerifiedDate' ( listVerifiedDate ? sdf.format(listVerifiedDate) : null )
@@ -326,22 +352,39 @@ select tipp.id,
     def result = [];
 
     if ( this.id ) {
+      def status_deleted = RefdataCategory.lookupOrCreate('KBComponent.Status','Deleted')
 
       // select tipp, accessStartDate, 'Added' from tipps UNION select tipp, accessEndDate, 'Removed' order by date
 
-      def additions = TitleInstancePackagePlatform.executeQuery('select tipp, tipp.accessStartDate, \'Added\' ' +
-                       'from TitleInstancePackagePlatform as tipp, Combo as c '+
-                       'where c.fromComponent=? and c.toComponent=tipp order by tipp.accessStartDate DESC',
-                      [this], [max:n]);
-      def deletions = TitleInstancePackagePlatform.executeQuery('select tipp, tipp.accessEndDate, \'Removed\' ' +
-                       'from TitleInstancePackagePlatform as tipp, Combo as c '+
-                       'where c.fromComponent=? and c.toComponent=tipp and tipp.accessEndDate is not null order by tipp.accessEndDate DESC',
-                       [this], [max:n]);
+//       def additions = TitleInstancePackagePlatform.executeQuery('select tipp, tipp.accessStartDate, \'Added\' ' +
+//                        'from TitleInstancePackagePlatform as tipp, Combo as c '+
+//                        'where c.fromComponent=? and c.toComponent=tipp and tipp.accessStartDate is not null order by tipp.dateCreated DESC',
+//                       [this], [max:n]);
+//       def deletions = TitleInstancePackagePlatform.executeQuery('select tipp, tipp.accessEndDate, \'Removed\' ' +
+//                        'from TitleInstancePackagePlatform as tipp, Combo as c '+
+//                        'where c.fromComponent= :pkg and c.toComponent=tipp and tipp.accessEndDate is not null order by tipp.lastUpdated DESC',
+//                        [pkg: this], [max:n]);
+                       
+      def changes =   TitleInstancePackagePlatform.executeQuery('select tipp from TitleInstancePackagePlatform as tipp, Combo as c '+
+                       'where c.fromComponent= ? and c.toComponent=tipp order by tipp.lastUpdated DESC',
+                       [this]);
+                       
+      use( TimeCategory ) {
+        changes.each {
+          if ( it.accessEndDate || it.isDeleted() ){
+            result.add([it,it.accessEndDate ?: it.lastUpdated, it.accessEndDate ? 'Removed (accessEndDate)' : 'Deleted (status)'])
+          }
+          if ( it.lastUpdated <= it.dateCreated + 5.seconds || it.accessStartDate ){
+            result.add([it, it.accessStartDate ?: it.dateCreated, it.accessStartDate ? 'Added (accessStartDate)' : 'Added (dateCreated)'])
+          }
+        }
+      }
 
-      result.addAll(additions)
-      result.addAll(deletions)
+//       result.addAll(additions)
+//       result.addAll(deletions)
       result.sort {it[1]}
       result = result.reverse();
+      result = result.take(n);
     }
 
     return result;
@@ -395,9 +438,80 @@ select tipp.id,
    */
   @Transient
   public static Package upsertDTO(packageHeaderDTO) {
-    def result = null
     log.info("Upsert package with header ${packageHeaderDTO}");
-    result = Package.findByName(packageHeaderDTO.name) ?: new Package(name:packageHeaderDTO.name).save(flush:true, failOnError:true);
+
+    def pkg_normname = Package.generateNormname(packageHeaderDTO.name)
+    def name_candidates = Package.executeQuery("select p from Package as p where p.normname = ? and p.status.value <> 'Deleted' ",[pkg_normname])
+    def full_matches = []
+    def result = false;
+
+    if(name_candidates.size() > 0 && packageHeaderDTO.identifiers?.size() > 0){
+      name_candidates.each { mp ->
+        if(mp.ids.size() > 0){
+          def full_match = true;
+
+          packageHeaderDTO.identifiers.each { rid ->
+
+            Identifier the_id = Identifier.lookupOrCreateCanonicalIdentifier(rid.type, rid.value);
+
+            if( !mp.ids.contains(the_id) ) {
+              full_match = false
+            }
+          }
+
+          if(full_match){
+            full_matches.add(mp)
+          }
+        }
+      }
+
+      if(full_matches.size() == 1){
+        result = full_matches[0]
+      }
+    }
+    else if (name_candidates.size() == 1) {
+      result = name_candidates[0]
+    }
+
+    if( !result ){
+
+      def variant_normname = GOKbTextUtils.normaliseString(packageHeaderDTO.name)
+      def candidate_pkgs = Package.executeQuery("select distinct p from Package as p join p.variantNames as v where v.normVariantName = ? and p.status.value <> 'Deleted' ",[variant_normname]);
+
+      if ( candidate_pkgs.size() == 1 ){
+        result = candidate_pkgs[0]
+        log.debug("Package matched via existing variantName.")
+      }
+    }
+
+    if( !result && packageHeaderDTO.variantNames?.size() > 0 ){
+      packageHeaderDTO.variantNames.each {
+
+        if(it.trim().size() > 0){
+          result = Package.findByName(it)
+
+          if ( result ){
+            log.debug("Found existing package name for variantName ${it}")
+          }else{
+
+            def variant_normname = GOKbTextUtils.normaliseString(it)
+            def candidate_pkgs = Package.executeQuery("select distinct p from Package as p join p.variantNames as v where v.normVariantName = ? and p.status.value <> 'Deleted' ",[variant_normname]);
+
+            if ( candidate_pkgs.size() == 1 ){
+              log.debug("Found existing package variant name for variantName ${it}")
+              result = candidate_pkgs[0]
+            }
+          }
+        }
+      }
+    }
+
+    if( !result ){
+      log.debug("No existing package matched. Creating new package..")
+
+      result = new Package(name:packageHeaderDTO.name, normname:pkg_normname).save(flush:true, failOnError:true)
+    }
+
 
     boolean changed = false;
 
@@ -426,38 +540,92 @@ select tipp.id,
     }
 
     if ( packageHeaderDTO.nominalPlatform ) {
-      def np = Platform.findByName(packageHeaderDTO.nominalPlatform)
-      if ( np ) {
-        result.nominalPlatform = np;
-        changed = true
+      def platformDTO = [:];
+
+      if (packageHeaderDTO.nominalPlatform instanceof String && packageHeaderDTO.nominalPlatform.trim().size() > 0){
+        platformDTO['name'] = packageHeaderDTO.nominalPlatform
+      }else if(packageHeaderDTO.nominalPlatform.name && packageHeaderDTO.nominalPlatform.name.trim().size() > 0){
+        platformDTO = packageHeaderDTO.nominalPlatform
+      }
+
+      if(platformDTO){
+        def np = Platform.upsertDTO(platformDTO)
+        if ( np ) {
+          result.nominalPlatform = np;
+          changed = true
+        }
+        else {
+          log.warn("Unable to locate nominal platform ${packageHeaderDTO.nominalPlatform}");
+        }
       }
       else {
-        log.warn("Unable to locate nominal platform ${packageHeaderDTO.nominalPlatform}");
+        log.warn("Could not extract platform information from JSON!")
+      }
+    }
+
+    packageHeaderDTO.identifiers?.each { it ->
+      if ( it.type && it.value && it.type != "originEditUrl") {
+        log.debug("Trying to add identifier ${it} to package ${result}");
+
+        Identifier the_id = Identifier.lookupOrCreateCanonicalIdentifier(it.type, it.value)
+
+        if ( the_id ) {
+          def id_combo_type = RefdataCategory.lookupOrCreate('Combo.Type', 'KBComponent.Ids')
+          def existing_identifier = Combo.executeQuery("Select c.id from Combo as c where c.fromComponent.id = ? and c.type.id = ? and c.toComponent.id = ?",[result.id,id_combo_type.id,the_id.id]);
+
+          if(existing_identifier.size() > 0){
+            log.debug("Identifier ${it} is already present for package!")
+          }
+          else{
+            Combo new_id = new Combo(toComponent:the_id, fromComponent:result, type:id_combo_type).save(flush:true, failOnError:true);
+            if( new_id ){
+              log.debug("Added new identifier combo succesfully!")
+              changed = true
+            }
+            else{
+              log.error("Unable to create new identifier combo!")
+            }
+          }
+        }
+        else {
+          log.error("Error processing identifier ${it}!")
+        }
+      }
+      else {
+        log.error("Non-valid identifier provided!")
       }
     }
 
     if ( packageHeaderDTO.nominalProvider ) {
+
+      log.debug("Trying to set package provider..")
       def norm_prov_name = KBComponent.generateNormname(packageHeaderDTO.nominalProvider)
 
       def prov = Org.findByNormname(norm_prov_name)
 
       if ( prov ) {
         result.provider = prov;
+
+        log.debug("Provider ${prov.name} set.")
         changed = true
       }else{
         def variant_normname = GOKbTextUtils.normaliseString(packageHeaderDTO.nominalProvider)
-        def candidate_orgs = Org.executeQuery("select distinct o from Org as o join o.variantNames as v where v.normVariantName = ?",[variant_normname]);
+        def candidate_orgs = Org.executeQuery("select distinct o from Org as o join o.variantNames as v where v.normVariantName = ? and o.status.value = 'Current'",[variant_normname]);
 
         if ( candidate_orgs.size() == 1 ) {
           result.provider = candidate_orgs[0]
+
+          log.debug("Provider ${candidate_orgs[0].name} set.")
           changed = true
         }
         else if ( candidate_orgs.size() == 0 ) {
+
+          log.debug("No org match for provider ${packageHeaderDTO.nominalProvider}. Creating new org..")
           result.provider = new Org(name:packageHeaderDTO.nominalProvider, normname:norm_prov_name).save(flush:true, failOnError:true);
           changed = true
         }
         else {
-          log.warn("Unable to match provider ${packageHeaderDTO.nominalProvider}");
+          log.warn("Multiple org matches for provider ${packageHeaderDTO.nominalProvider}. Skipping..");
         }
       }
     }
@@ -490,7 +658,7 @@ select tipp.id,
         }
       }
     }
-    
+
     result.save(flush:true, failOnError:true);
 
 

@@ -2,15 +2,16 @@
   <dt>
     <g:annotatedLabel owner="${d}" property="name">Title</g:annotatedLabel>
   </dt>
-  <dd>
-    ${d.name}
-    (Modify title through variants below)
+  <dd style="max-width:55%">
+    <div>
+      <span>${d.name}</span> <span style="white-space:nowrap;">(Modify title through variants below)</span>
+    </div>
   </dd>
 
   <dt>
     <g:annotatedLabel owner="${d}" property="status">Work</g:annotatedLabel>
   </dt>
-  <dd>
+  <dd style="width:50%">
     <g:if test="${d.work}">
       <g:link controller="resource" action="show" id="${d.work.class.name}:${d.work.id}"> ${d.work.name} </g:link>
     </g:if>
@@ -181,39 +182,39 @@
 <div id="content">
   <ul id="tabs" class="nav nav-tabs">
     <li class="active"><a href="#titledetails" data-toggle="tab">Title Details</a></li>
-    <li><a href="#altnames" data-toggle="tab">Alternate Names <span class="badge badge-warning"> ${d.variantNames?.size()}</span> </a></li>
+    <li><a href="#altnames" data-toggle="tab">Alternate Names <span class="badge badge-warning"> ${d.variantNames?.size() ?: '0'}</span> </a></li>
         
     <g:if test="${ d.isEditable() }">
       <li><a href="#history" data-toggle="tab">Add to Title History</a></li>
     </g:if>
 
-    <li><a href="#identifiers" data-toggle="tab">Identifiers <span class="badge badge-warning"> ${d.ids?.size()} </span></a></li>
+    <li><a href="#identifiers" data-toggle="tab">Identifiers <span class="badge badge-warning"> ${d.ids?.size() ?: '0'} </span></a></li>
 
     <li><a href="#publishers" data-toggle="tab">Publishers <span
         class="badge badge-warning">
-          ${d.publisher?.size()}
+          ${d.publisher?.size() ?: '0'}
       </span></a></li>
 
     <li><a href="#availability" data-toggle="tab">Availability <span
         class="badge badge-warning">
-          ${d.tipps?.size()}
+          ${d.tipps?.size() ?: '0'}
       </span></a></li>
 
     <li><a href="#addprops" data-toggle="tab">Custom Fields <span
         class="badge badge-warning">
-          ${d.additionalProperties?.size()}
+          ${d.additionalProperties?.size() ?: '0'}
       </span></a></li>
 
     <li><a href="#review" data-toggle="tab">Review Tasks <span
         class="badge badge-warning">
-          ${d.reviewRequests?.size()}
+          ${d.reviewRequests?.size() ?: '0'}
       </span></a></li>
 
     <li><a href="#ds" data-toggle="tab">Decision Support</a></li>
 
-    <li><a href="#people" data-toggle="tab">People <span class="badge badge-warning"> ${d.people?.size()} </span></a></li>
+    <li><a href="#people" data-toggle="tab">People <span class="badge badge-warning"> ${d.people?.size() ?: '0'} </span></a></li>
 
-    <li><a href="#subjects" data-toggle="tab">Subjects <span class="badge badge-warning"> ${d.subjects?.size()} </span></a></li>
+    <li><a href="#subjects" data-toggle="tab">Subjects <span class="badge badge-warning"> ${d.subjects?.size() ?: '0'} </span></a></li>
 
   </ul>
   <div id="my-tab-content" class="tab-content">
@@ -353,14 +354,15 @@
 
     </div>
 
-    <div class="tab-pane" id="identifiers">
+
     <div class="tab-pane" id="identifiers">
       <g:render template="simpleCombos" contextPath="../apptemplates"
         model="${[d:d, property:'ids', fragment:'identifiers', cols:[
                   [expr:'namespace.value', colhead:'Namespace'],
                   [expr:'value', colhead:'ID', action:'link']]]}" />
+      <g:render template="addIdentifier" contextPath="../apptemplates" model="${[d:d, hash:'#identifiers']}"/>
     </div>
-    </div>
+
 
     <div class="tab-pane" id="addprops">
       <g:render template="addprops" contextPath="../apptemplates"

@@ -84,7 +84,9 @@ class Org extends KBComponent {
 
     if ( ql ) {
       ql.each { t ->
-        result.add([id:"${t.class.name}:${t.id}",text:"${t.name}"])
+        if( !params.filter1 || t.status.value == params.filter1 ){
+          result.add([id:"${t.class.name}:${t.id}",text:"${t.name}"])
+        }
       }
     }
 
@@ -126,8 +128,9 @@ class Org extends KBComponent {
   static def oaiConfig = [
     id:'orgs',
     textDescription:'Organization repository for GOKb',
-    query:" from Org as o where o.status.value != 'Deleted'",
-    pageSize:50
+    query:" from Org as o ",
+    statusFilter:"where o.status.value != 'Deleted'",
+    pageSize:10
   ]
 
   /**

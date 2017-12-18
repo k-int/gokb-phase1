@@ -36,7 +36,7 @@ class TitleInstance extends KBComponent {
   @Transient
   public title_status_properties = [:]
 
-  public void addVariantTitle (String title, String locale = "EN-us") {
+  public void addVariantTitle (String title, String locale = null) {
 
     // Check that the variant is not equal to the name of this title first.
     if (!title.equalsIgnoreCase(this.name)) {
@@ -44,7 +44,10 @@ class TitleInstance extends KBComponent {
       // Need to compare the existing variant names here. Rather than use the equals method,
       // we are going to compare certain attributes here.
       RefdataValue title_type = RefdataCategory.lookupOrCreate("KBComponentVariantName.VariantType", "Alternate Title")
-      RefdataValue locale_rd = RefdataCategory.lookupOrCreate("KBComponentVariantName.Locale", (locale))
+      
+      if(locale){
+        RefdataValue locale_rd = RefdataValue.findByOwnerAndValue(RefdataCategory.findByDesc("KBComponentVariantName.Locale"), (locale))
+      }
 
       // Each of the variants...
       def existing = variantNames.find {
@@ -103,7 +106,8 @@ class TitleInstance extends KBComponent {
     [ [code:'method::deleteSoft', label:'Delete'],
       [code:'title::transfer', label:'Title Transfer'],
       [code:'title::change', label:'Title Change'],
-      // [code:'title::reconcile', label:'Title Reconcile']
+      [code:'title::merge', label:'Title Merge']
+//       [code:'title::reconcile', label:'Title Reconcile']
     ]
   }
 
@@ -216,7 +220,8 @@ class TitleInstance extends KBComponent {
   static def oaiConfig = [
     id:'titles',
     textDescription:'Title repository for GOKb',
-    query:" from TitleInstance as o where o.status.value != 'Deleted'",
+    query:" from TitleInstance as o ",
+    statusFilter:"where o.status.value != 'Expected'",
     pageSize:20
   ]
 
@@ -273,6 +278,7 @@ class TitleInstance extends KBComponent {
               }
 
               if ( pub_org ) {
+                def org_ids = pub_org.getIds()
                 builder."publisher" (['id': pub_org?.id]) {
                   "name" (pub_org?.name)
                   if ( pc.startDate ) {
@@ -283,6 +289,14 @@ class TitleInstance extends KBComponent {
                   }
                   if (pc.status) {
                     "status" (pc.status)
+                  }
+                  builder."identifiers" {
+                    org_ids?.each { org_id ->
+                      builder.'identifier' ('namespace':org_id?.namespace?.value, 'value':org_id?.value)
+                    }
+                    if ( grailsApplication.config.serverUrl ) {
+                      builder.'identifier' ('namespace':'originEditUrl', 'value':"${grailsApplication.config.serverUrl}/resource/show/org.gokb.cred.Org:${pub_org?.id}")
+                    }
                   }
                 }
               }
@@ -308,7 +322,9 @@ class TitleInstance extends KBComponent {
                         hti.getIds()?.each { tid ->
                           builder.'identifier' ('namespace':tid.namespace?.value, 'value':tid.value, 'datatype':tid.namespace.datatype?.value)
                         }
-
+                        if ( grailsApplication.config.serverUrl ) {
+                          builder.'identifier' ('namespace':'originEditUrl', 'value':"${grailsApplication.config.serverUrl}/resource/show/${hti.class.name}:${hti.id}")
+                        }
                       }
                     }
                   }
@@ -321,6 +337,9 @@ class TitleInstance extends KBComponent {
                       "identifiers" {
                         hti.getIds()?.each { tid ->
                           builder.'identifier' ('namespace':tid.namespace?.value, 'value':tid.value)
+                        }
+                        if ( grailsApplication.config.serverUrl ) {
+                          builder.'identifier' ('namespace':'originEditUrl', 'value':"${grailsApplication.config.serverUrl}/resource/show/${hti.class.name}:${hti.id}")
                         }
                       }
                     }
@@ -488,12 +507,12 @@ class TitleInstance extends KBComponent {
   }
 
   @Transient
-  public static TitleInstance upsertDTO(titleLookupService,titleDTO) {
+  public static TitleInstance upsertDTO(titleLookupService,titleDTO,user=null) {
     def result = null;
     result = titleLookupService.find(titleDTO.name,
                                      titleDTO.publisher,
                                      titleDTO.identifiers,
-                                     null,
+                                     user,
                                      null,
                                      titleDTO.type=='Serial' ? 'org.gokb.cred.JournalInstance' : 'org.gokb.cred.BookInstance' )
 

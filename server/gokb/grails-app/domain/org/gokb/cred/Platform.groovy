@@ -2,6 +2,7 @@ package org.gokb.cred
 
 import javax.persistence.Transient
 import groovy.util.logging.*
+import org.gokb.GOKbTextUtils
 
 @Log4j
 class Platform extends KBComponent {
@@ -12,7 +13,7 @@ class Platform extends KBComponent {
   RefdataValue service
   RefdataValue ipAuthentication
   RefdataValue shibbolethAuthentication
-  RefdataValue passwordAuthenitcation
+  RefdataValue passwordAuthentication
 
   static hasMany = [roles: RefdataValue]
   
@@ -39,7 +40,7 @@ class Platform extends KBComponent {
     service column:'plat_svc_fk_rv'
     ipAuthentication column:'plat_auth_by_ip_fk_rv'
     shibbolethAuthentication column:'plat_auth_by_shib_fk_rv'
-    passwordAuthenitcation column:'plat_auth_by_pass_fk_rv'
+    passwordAuthentication column:'plat_auth_by_pass_fk_rv'
   }
 
   static constraints = {
@@ -49,14 +50,15 @@ class Platform extends KBComponent {
     service  (nullable:true, blank:false)
     ipAuthentication  (nullable:true, blank:false)
     shibbolethAuthentication  (nullable:true, blank:false)
-    passwordAuthenitcation  (nullable:true, blank:false)
+    passwordAuthentication  (nullable:true, blank:false)
   }
 
   @Transient
   static def oaiConfig = [
     id:'platforms',
     textDescription:'Platform repository for GOKb',
-    query:" from Platform as o where o.status.value != 'Deleted'"
+    query:" from Platform as o ",
+    statusFilter:"where o.status.value != 'Deleted'"
   ]
 
   /**
@@ -87,7 +89,6 @@ class Platform extends KBComponent {
         builder.'software' (software?.value)
         builder.'service' (service?.value)
         
-        builder.'authentication' (authentication?.value)
         if (ipAuthentication) builder.'ipAuthentication' (ipAuthentication.value)
         if (shibbolethAuthentication) builder.'shibbolethAuthentication' (shibbolethAuthentication.value)
         if (passwordAuthentication) builder.'passwordAuthentication' (passwordAuthentication.value)
@@ -119,7 +120,9 @@ class Platform extends KBComponent {
 
     if ( ql ) { 
       ql.each { t ->
-        result.add([id:"${t.class.name}:${t.id}",text:"${t.name}"])
+        if( !params.filter1 || t.status.value == params.filter1 ){
+          result.add([id:"${t.class.name}:${t.id}",text:"${t.name}"])
+        }
       }   
     }   
 
@@ -153,9 +156,127 @@ class Platform extends KBComponent {
   }
 
   @Transient
-  public static Platform upsertDTO(platformDTO) {
+  public static Platform upsertDTO(platformDTO, def user = null, def project = null) {
     // Ideally this should be done on platformUrl, but we fall back to name here
-    def result = Platform.findByName(platformDTO.name) ?: new Platform(name:platformDTO.name).save(flush:true,failOnError:true)
+    
+    def result = false;
+    def skip = false;
+    def status_current = RefdataCategory.lookupOrCreate('KBComponent.Status','Current')
+    
+    if(platformDTO.name.startsWith("http")){
+      try {
+        log.debug("checking if platform name is an URL..")
+        
+        def url_as_name = new URL(platformDTO.name)
+        
+        if(url_as_name.getProtocol()){ 
+          if(!platformDTO.primaryUrl || platformDTO.primaryUrl.trim.size() == 0){
+            log.debug("identified URL as platform name")
+            platformDTO.primaryUrl = platformDTO.name
+          }
+          
+          platformDTO.name = url_as_name.getHost()
+          log.debug("New platform name is ${platformDTO.name}.")
+        }
+      } catch( MalformedURLException ){
+        log.debug("Platform name is no valid URL")
+      }
+    }
+    
+    def name_candidates = Platform.executeQuery("from Platform where name = ? and status = ?", [platformDTO.name, status_current]);
+    def url_candidates = [];
+    def viable_url = false;
+    
+    if(platformDTO.primaryUrl && platformDTO.primaryUrl.trim().size() > 0){
+      try {
+        def inc_url = new URL(platformDTO.primaryUrl);
+        
+        if(inc_url){
+          viable_url = true;
+          String urlHost = inc_url.getHost();
+          
+          if(urlHost.startsWith("www")){
+            urlHost = urlHost.substring(4)
+          }
+          
+          url_candidates = Platform.executeQuery("select distinct pl from Platform as pl where pl.status = ? and ( pl.primaryUrl = ? or pl.name = ? ) ", [status_current, platformDTO.primaryUrl, urlHost]);
+          
+          if( url_candidates.size() == 0 && inc_url.getProtocol() == "http" ){
+            URL alt_scheme = new URL("https", inc_url.getHost(), inc_url.getPort(), inc_url.getFile(), inc_url.getRef());
+            log.debug("Also trying URL: ${alt_scheme.toString()}")
+            url_candidates = Platform.executeQuery("select distinct pl from Platform as pl where pl.status = ? and pl.primaryUrl = ? ", [status_current, alt_scheme.toString()]);
+          }
+          else if( url_candidates.size() == 0 && inc_url.getProtocol() == "https" ){
+            URL alt_scheme = new URL("http", inc_url.getHost(), inc_url.getPort(), inc_url.getFile(), inc_url.getRef());
+            log.debug("Also trying URL: ${alt_scheme.toString()}")
+            url_candidates = Platform.executeQuery("select distinct pl from Platform as pl where pl.status = ? and pl.primaryUrl = ? ", [status_current, alt_scheme.toString()]);
+          }
+        }
+      } catch( MalformedURLException ex ) {
+        log.error("URL of ingest Platform ${platformDTO} is broken!")
+      }
+    }
+    
+    if(name_candidates.size() == 0){
+      log.debug("No active platforms matched by name!")
+
+      def variant_normname = GOKbTextUtils.normaliseString(platformDTO.name)
+
+      def varname_candidates = Platform.executeQuery("select distinct pl from Platform as pl join pl.variantNames as v where v.normVariantName = ? and pl.status = ? ",[variant_normname, status_current])
+
+      if(varname_candidates.size() == 1){
+        log.debug("Platform matched by variant name!")
+        result = varname_candidates[0]
+      }
+
+    }else if(name_candidates.size() == 1 && name_candidates[0].status == status_current){
+      log.debug("Platform ${platformDTO.name} matched by name!")
+      result = name_candidates[0];
+    }else{
+      log.warn("Could not match a current platform for ${platformDTO.name}!");
+    }
+    
+    if(!result && viable_url){
+      log.debug("Trying to match platform by primary URL..")
+      
+      if(url_candidates.size() == 0){
+        log.debug("Could not match an existing platform!")
+      }else if(url_candidates.size() == 1 && url_candidates[0].status == status_current){
+        log.debug("Matched existing platform by URL!")
+        result = url_candidates[0];
+      }else if(url_candidates.size() > 1) {
+        log.warn("Matched multiple platforms by URL!")
+
+        // Picking randomly from multiple results is bad, but right now a result is always expected. Maybe this should be skipped...
+        // skip = true
+        def current_platforms = url_candidates.findAll { it.status == status_current }
+
+        if (current_platforms.size() == 1){
+          result = current_platforms[0]
+          
+          if ( !result.primaryUrl ) {
+            result.primaryUrl = platformDTO.primaryUrl
+            result.save(flush:true,failOnError:true)
+          }
+        }else{
+          log.debug("Could not decide on a Platform, skipping..")
+          skip = true;
+        }
+      }
+    }
+    
+    if(!result && !skip){
+      log.debug("Creating new platform for: ${platformDTO}")
+      result = new Platform(name:platformDTO.name, normname: KBComponent.generateNormname(platformDTO.name), primaryUrl: (viable_url ? platformDTO.primaryUrl : null )).save(flush:true,failOnError:true)
+      
+      ReviewRequest.raise(
+        result,
+        "The platform ${result} did not exist and was newly created.",
+        "New platform created",
+        user, project
+      )
+    }
+    
     result;
   }
 

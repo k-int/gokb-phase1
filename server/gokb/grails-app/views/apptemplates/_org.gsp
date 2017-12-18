@@ -1,56 +1,56 @@
-<div id="content">
+<dl class="dl-horizontal">
+      <dt>
+              <g:annotatedLabel owner="${d}" property="name">Name</g:annotatedLabel>
+      </dt>
+      <dd>
+              <g:xEditable class="ipe" owner="${d}" field="name" />
+      </dd>
+      <dt>
+              <g:annotatedLabel owner="${d}" property="status">Status</g:annotatedLabel>
+      </dt>
+      <dd>
+              <g:xEditableRefData owner="${d}" field="status"
+                      config="KBComponent.Status" />
+      </dd>
+      <dt>
+              <g:annotatedLabel owner="${d}" property="reference">Reference</g:annotatedLabel>
+      </dt>
+      <dd>
+              <g:xEditable class="ipe" owner="${d}" field="reference" />
+      </dd>
+      <dt>
+              <g:annotatedLabel owner="${d}" property="source">Source</g:annotatedLabel>
+      </dt>
+      <dd>
+              <g:manyToOneReferenceTypedown owner="${d}" field="source"
+                      baseClass="org.gokb.cred.Source">
+                      ${d.source?.name}
+              </g:manyToOneReferenceTypedown>
+      </dd>
+</dl>
 
-	<dl class="dl-horizontal">
-		<dt>
-			<g:annotatedLabel owner="${d}" property="name">Name</g:annotatedLabel>
-		</dt>
-		<dd>
-			<g:xEditable class="ipe" owner="${d}" field="name" />
-		</dd>
-		<dt>
-			<g:annotatedLabel owner="${d}" property="status">Status</g:annotatedLabel>
-		</dt>
-		<dd>
-			<g:xEditableRefData owner="${d}" field="status"
-				config="KBComponent.Status" />
-		</dd>
-		<dt>
-			<g:annotatedLabel owner="${d}" property="reference">Reference</g:annotatedLabel>
-		</dt>
-		<dd>
-			<g:xEditable class="ipe" owner="${d}" field="reference" />
-		</dd>
-		<dt>
-			<g:annotatedLabel owner="${d}" property="source">Source</g:annotatedLabel>
-		</dt>
-		<dd>
-			<g:manyToOneReferenceTypedown owner="${d}" field="source"
-				baseClass="org.gokb.cred.Source">
-				${d.source?.name}
-			</g:manyToOneReferenceTypedown>
-		</dd>
-	</dl>
+<div id="content">
 	<g:if test="${d.id != null}">
 		<ul id="tabs" class="nav nav-tabs">
 			<li class="active"><a href="#orgdetails" data-toggle="tab">Organization</a></li>
 			<li><a href="#altnames" data-toggle="tab">Alternate Names <span
-					class="badge badge-warning"> ${d.variantNames?.size()}
+					class="badge badge-warning"> ${d.variantNames?.size() ?: '0'}
 				</span></a></li>
 			<li><a href="#ids" data-toggle="tab">IDs <span
-					class="badge badge-warning"> ${d.ids?.size()}
+					class="badge badge-warning"> ${d.ids?.size() ?: '0'}
 				</span></a></li>
 			<li><a href="#licenses" data-toggle="tab">Licenses</a></li>
 			<li><a href="#packages" data-toggle="tab">Packages</a></li>
 			<li><a href="#titles" data-toggle="tab">Published Titles</a></li>
 			<li><a href="#platforms" data-toggle="tab">Platforms</a></li>
 			<li><a href="#addprops" data-toggle="tab">Custom Fields <span
-					class="badge badge-warning"> ${d.additionalProperties?.size()}
+					class="badge badge-warning"> ${d.additionalProperties?.size() ?: '0'}
 				</span></a></li>
 			<li><a href="#review" data-toggle="tab">Review Tasks <span
-					class="badge badge-warning"> ${d.reviewRequests?.size()}
+					class="badge badge-warning"> ${d.reviewRequests?.size() ?: '0'}
 				</span></a></li>
 			<li><a href="#offices" data-toggle="tab">Offices <span
-					class="badge badge-warning"> ${d.offices?.size()}
+					class="badge badge-warning"> ${d.offices?.size() ?: '0'}
 				</span></a></li>
 		</ul>
 

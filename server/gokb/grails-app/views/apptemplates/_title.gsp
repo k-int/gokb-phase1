@@ -2,9 +2,10 @@
   <dt>
     <g:annotatedLabel owner="${d}" property="name">Title</g:annotatedLabel>
   </dt>
-  <dd>
-    ${d.name}
-    (Modify title through variants below)
+  <dd style="max-width:55%">
+    <div>
+      <span>${d.name}</span> <span style="white-space:nowrap;">(Modify title through variants below)</span>
+    </div>
   </dd>
 
   <dt>
@@ -76,28 +77,28 @@
 <div id="content">
   <ul id="tabs" class="nav nav-tabs">
     <li class="active"><a href="#titledetails" data-toggle="tab">Title Details</a></li>
-    <li><a href="#altnames" data-toggle="tab">Alternate Names <span class="badge badge-warning"> ${d.variantNames?.size()}</span> </a></li>
+    <li><a href="#altnames" data-toggle="tab">Alternate Names <span class="badge badge-warning"> ${d.variantNames?.size() ?: '0'}</span> </a></li>
 
     <g:if test="${ d.isEditable() }">
       <li><a href="#history" data-toggle="tab">Add to Title History</a></li>
     </g:if>
     <li><a href="#identifiers" data-toggle="tab">Identifiers <span
         class="badge badge-warning">
-          ${d.ids?.size()}
+          ${d.ids?.size() ?: '0'}
       </span></a></li>
     <li><a href="#publishers" data-toggle="tab">Publishers <span
         class="badge badge-warning">
-          ${d.getCombosByPropertyNameAndStatus('publisher',params.publisher_status)?.size()}
+          ${d.getCombosByPropertyNameAndStatus('publisher',params.publisher_status)?.size() ?: '0'}
       </span></a></li>
     <li><a href="#availability" data-toggle="tab">Availability <span
         class="badge badge-warning">
-          ${d.tipps?.size()}
+          ${d.tipps?.size() ?: '0'}
       </span></a></li>
     <li><a href="#addprops" data-toggle="tab">Custom Fields <span
         class="badge badge-warning">
-          ${d.additionalProperties?.size()}
+          ${d.additionalProperties?.size() ?: '0'}
       </span></a></li>
-    <li><a href="#review" data-toggle="tab">Review Tasks <span class="badge badge-warning"> ${d.reviewRequests?.size()} </span></a></li>
+    <li><a href="#review" data-toggle="tab">Review Tasks <span class="badge badge-warning"> ${d.reviewRequests?.size() ?: '0'} </span></a></li>
 
   </ul>
   <div id="my-tab-content" class="tab-content">
@@ -259,12 +260,14 @@
       <dt>
         <g:annotatedLabel owner="${d}" property="publishers">Publishers</g:annotatedLabel>
       </dt>
-      <g:form method="POST" controller="${controllerName}" action="${actionName}" fragment="publishers" params="${params.findAll{k, v -> k != 'publisher_status'}}">
-
-       Hide Deleted : <g:select name="publisher_status" optionKey="key" optionValue="value" from="${[null:'Off','Active':'On']}" value="${params.publisher_status}" />
-      </g:form>
 
      <dd>
+        <div>
+          <g:form method="POST" controller="${controllerName}" action="${actionName}" fragment="publishers" params="${params.findAll{k, v -> k != 'publisher_status'}}">
+
+            Hide Deleted : <g:select name="publisher_status" optionKey="key" optionValue="value" from="${[null:'Off','Active':'On']}" value="${params.publisher_status}" />
+          </g:form>
+        </div>
         <table class="table table-striped table-bordered">
           <thead>
             <tr>

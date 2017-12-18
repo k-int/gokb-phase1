@@ -23,6 +23,14 @@
     <dd>
       <g:manyToOneReferenceTypedown owner="${d}" field="source" baseClass="org.gokb.cred.Source">${d.source?.name}</g:manyToOneReferenceTypedown>
     </dd>
+    <g:if test="${d.status}">
+      <dt>
+        <g:annotatedLabel owner="${d}" property="status">Status</g:annotatedLabel>
+      </dt>
+      <dd>
+        ${d.status?.value}
+      </dd>
+    </g:if>
 
     <g:if test="${d.lastProject}">
       <dt>
@@ -40,7 +48,7 @@
       <g:annotatedLabel owner="${d}" property="userListVerifier">List Verifier</g:annotatedLabel>
     </dt>
     <dd>
-      <g:manyToOneReferenceTypedown owner="${d}" field="userListVerifier" baseClass="org.gokb.cred.User">${d.userListVerifier?.displayName}</g:manyToOneReferenceTypedown>
+      <g:manyToOneReferenceTypedown owner="${d}" field="userListVerifier" baseClass="org.gokb.cred.User">${d.userListVerifier?.displayName ?: ''}</g:manyToOneReferenceTypedown>
     </dd>
     <dt> <g:annotatedLabel owner="${d}" property="listVerifierDate">List Verifier Date</g:annotatedLabel> </dt>
     <dd> <g:xEditable class="ipe" owner="${d}" type="date" field="listVerifiedDate" /> </dd>
@@ -59,10 +67,10 @@
 
     <ul id="tabs" class="nav nav-tabs">
       <li class="active"><a href="#packagedetails" data-toggle="tab">Package Details</a></li>
-      <li><a href="#titledetails" data-toggle="tab">Titles <span class="badge badge-warning"> ${d.tipps?.size()} </span></a></li>
-      <li><a href="#identifiers" data-toggle="tab">Identifiers <span class="badge badge-warning"> ${d.ids?.size()} </span></a></li>      
+      <li><a href="#titledetails" data-toggle="tab">TIPPs <span class="badge badge-warning"> ${d.tipps?.findAll{ it.status.value == 'Current'}?.size() ?: '0'} </span></a></li>
+      <li><a href="#identifiers" data-toggle="tab">Identifiers <span class="badge badge-warning"> ${d.ids?.size() ?: '0'} </span></a></li>      
       <li><a href="#altnames" data-toggle="tab">Alternate Names 
-        <span class="badge badge-warning"> ${d.variantNames?.size()}</span>
+        <span class="badge badge-warning"> ${d.variantNames?.size() ?: '0'}</span>
       </a></li>
       <li><a href="#ds" data-toggle="tab">Decision Support</a></li>
       <li><a href="#activity" data-toggle="tab">Activity</a></li>
@@ -87,9 +95,14 @@
       </div>
 
       <div class="tab-pane" id="titledetails">
-        <g:link class="display-inline" controller="search" action="index"
-          params="[qbe:'g:3tipps', qp_pkg_id:d.id, hide:['qp_pkg_id', 'qp_cp', 'qp_pkg', 'qp_pub_id', 'qp_plat']]"
-          id="">Titles in this package</g:link>
+        <g:if test="${params.controller != 'create'}">
+          <g:link class="display-inline" controller="search" action="index"
+            params="[qbe:'g:3tipps', qp_pkg_id:d.id, hide:['qp_pkg_id', 'qp_cp', 'qp_pkg', 'qp_pub_id', 'qp_plat', 'qp_status']]"
+            id="">Titles in this package</g:link>
+        </g:if>
+        <g:else>
+          TIPPs can be added after the creation process has been finished.
+        </g:else>
 
         <g:if test="${ editable }">
           <g:form controller="ajaxSupport" action="addToCollection"
@@ -123,6 +136,7 @@
                                 model="${[d:d, property:'ids', cols:[
                   [expr:'toComponent.namespace.value', colhead:'Namespace'],
                   [expr:'toComponent.value', colhead:'ID', action:'link']]]}" />
+        <g:render template="addIdentifier" contextPath="../apptemplates" model="${[d:d, hash:'#identifiers']}"/>
       </div>
 
       <div class="tab-pane" id="ds">
@@ -143,11 +157,16 @@
               <tr>
                 <td>${h[1]}</td>
                 <td>${h[2]}</td>
-                <td>${h[0].title?.name}</td>
+                <td>${h[0].title?.name} (<g:link controller="resource" action="show" id="${h[0].getClassName()+':'+h[0].id}">TIPP ${h[0].id}</g:link>)</td>
               </tr>
             </g:each>
           </tbody>
         </table>
+      </div>
+      
+      <div class="tab-pane" id="review">
+        <g:render template="revreqtab" contextPath="../apptemplates"
+          model="${[d:d]}" />
       </div>
 
 

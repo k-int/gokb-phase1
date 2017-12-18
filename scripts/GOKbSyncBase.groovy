@@ -29,6 +29,31 @@ import static groovyx.net.http.Method.POST
 import org.apache.commons.io.FilenameUtils
 
 abstract class GOKbSyncBase extends Script {
+
+  def startTS = null
+  def endTS = null
+  def sdf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+  
+  if (args.size() > 0) {
+    args.eachWithIndex { arg, index ->
+      if ( arg == '--after' && args.size() > index + 1 ) {
+        try {
+          startTS = sdf.parse(args[index+1])
+        } catch ( Exception e ) {
+          println("Could not parse --after value")
+          System.exit(0)
+        }
+      }
+      else if ( arg == '--before' && args.size() > index + 1 ) {
+        try {
+          endTS = sdf.parse(args[index+1])
+        } catch ( Exception e ) {
+          println("Could not parse --before value")
+          System.exit(0)
+        }
+      }
+    }
+  }
   
   String sourceBase = 'http://gokb.openlibraryfoundation.org/'
   int source_timeout_retry = 3
@@ -95,6 +120,8 @@ abstract class GOKbSyncBase extends Script {
   
   protected saveConfig () {
     cfg_file.delete()
+    config.remove('deferred')
+    
     cfg_file << toJson(config)
   }
   
@@ -163,7 +190,21 @@ abstract class GOKbSyncBase extends Script {
     if (!parameters.containsKey('query')) {
       parameters['query'] = [verb: 'ListRecords', metadataPrefix: 'gokb']
     }
-    if (config.resumptionToken) parameters['query']['resumptionToken'] = config.resumptionToken
+    
+    if (config.resumptionToken) {
+      def resumption_offset = null
+      
+      if (startTS || endTS) {
+        def resumption = config.resumptionToken.split('\\|')
+        
+        if ( resumption.length() == 4 && resumption[2].length() > 0) {
+          resumption_offset = resumption[2]
+        }
+        config.resumptionToken = "${startTS ?: ''}|${endTS ?: ''}|${resumption_offset}|gokb"
+      }
+      
+      parameters['query']['resumptionToken'] = config.resumptionToken
+    }
     
     boolean success = false // flag to terminate loop.
     while (!success) {
@@ -254,9 +295,19 @@ abstract class GOKbSyncBase extends Script {
   
   protected directAddFields (def data, Collection<String> fields = [], Map addTo = [:]) {
     if (data) {
-      fields?.each {
-        def val = cleanText ( data?."${it}"?.text() )
-        if (val) addTo[it] = val
+      fields?.each { f ->
+        data[f]?.each { d ->
+          def val = cleanText ( d.text() )
+          if ( val && !addTo[f] ) { 
+            addTo[f] = val;
+          } 
+          else if ( !val ) { 
+            println("skipping empty field ${f}")
+          }
+          else if ( addTo[f] ) {
+            println("skipping duplicate field ${f}")
+          }
+        }
       }
     }
     
@@ -337,6 +388,7 @@ abstract class GOKbSyncBase extends Script {
     
     // We should save the config here if clean exit...
     if (!moredata) {
+      config.remove('resumptionToken')
       saveConfig()
     }
   }

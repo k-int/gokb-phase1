@@ -213,7 +213,6 @@ class TitleLookupService {
             the_title = clazz.newInstance()
             the_title.name = metadata.title
             the_title.normname = KBComponent.generateNormname(metadata.title);
-            // the_title.status = 
             // the_title.editStatus = 
             the_title.ids = []
           }
@@ -283,7 +282,7 @@ class TitleLookupService {
         
         // We should raise a review request here if the match was made by cross checking
         // different identifier namespaces.
-        if (results['x_check_matches'].size() == 1) {
+        if (results['x_check_matches'].size() == 1 && results['x_check_matches'][0]['suppliedNS'] != 'issnl') {
           
           def data = results['x_check_matches'][0]
           
@@ -296,28 +295,85 @@ class TitleLookupService {
             project
           )
         }
+
+        // If one identifier matches, but all other class ones are different, it is probably not a real match.
+
+        def id_mismatches = []
+
+        results['ids'].each { rid ->
+          matches[0].ids.each { mid ->
+            if ( rid.namespace == mid.namespace && rid.value != mid.value ) {
+              if ( !matches[0].ids.contains(rid) ) {
+                id_mismatches.add(rid)
+              }
+            }
+          }
+        }
+
+//         if( id_mismatches > 0 ) {
+//           ReviewRequest.raise(
+//             matches[0],
+//             "Identifier mismatch.",
+//             "Ingest identifier differs from existing one in the same namespace.",
+//             user,
+//             project
+//           )
+//         }
         
         // Take whatever we can get if what we have is an unknown title
-        if ( metadata.title.startsWith("Unknown Title") ) {
+        if ( metadata.title.startsWith("Unknown Title") || metadata.status == "Expected" ) {
           // Don't go through title matching if we don't have a real title
           the_title = matches[0]
         }
         else {
-          if ( matches[0].name.startsWith("Unknown Title") ) {
+          if ( matches[0].name.startsWith("Unknown Title") || metadata.status == "Expected" ) {
             // If we have an unknown title in the db, and a real title, then take that
-            // in preference 
+            // in preference
+            log.debug("Found new Title ${metadata.name} for previously unknown title ${matches[0]} (${matches[0].name})")
             the_title = matches[0]
             the_title.name = metadata.title
             the_title.status = RefdataCategory.lookupOrCreate('KBComponent.Status', 'Current')
           }
           else {
-            if ( matches[0].name.equals(metadata.title) ) { 
-              // Perfect match - do nothing  
+            if ( matches[0].name.equals(metadata.title) || matches[0].normname?.equals(KBComponent.generateNormname(metadata.title)) ) { 
+              // Perfect match - do nothing
               the_title = matches[0]
+
+              if( id_mismatches.size() > 0 ){
+                ReviewRequest.raise(
+                  matches[0],
+                  "Identifier mismatch.",
+                  "Title ${matches[0]} matched, but ingest identifiers ${id_mismatches} differ from existing ones in the same namespaces.",
+                  user,
+                  project
+                )
+              }
             }
             else {
-              // Now we can examine the text of the title.
-              the_title = singleTIMatch(metadata.title,matches[0], user, project)
+              if( id_mismatches.size() > 0 ){
+                // Another class one identifier of the matched title is different. This looks like a new title.
+
+                if ( newTitleClassName == null ) {
+                  the_title = new TitleInstance(name:metadata.title, normname:KBComponent.generateNormname(metadata.title), ids:[])
+                }
+                else {
+                  def clazz = Class.forName(newTitleClassName)
+                  the_title = clazz.newInstance()
+                  the_title.name = metadata.title
+                  the_title.normname = KBComponent.generateNormname(metadata.title)
+                  the_title.ids = []
+                }
+                ReviewRequest.raise(
+                  the_title,
+                  "New TI created.",
+                  "TitleInstance ${matches[0].id} was matched on one identifier, but at least one other ingest identifier differs from existing ones in the same namespace.",
+                  user,
+                  project
+                )
+              }else{
+                // Now we can examine the text of the title.
+                the_title = singleTIMatch(metadata.title,matches[0], user, project)
+              }
             }
           }
         }
@@ -325,7 +381,82 @@ class TitleLookupService {
 
       default :
         // Multiple matches.
-        log.debug ("Title class one identifier lookup yielded ${matches.size()} matches - ${matches.collect{it.id}}. This is a bad match. Ingest should skip this row.")
+        log.debug ("Title class one identifier lookup yielded ${matches.size()} matches - ${matches.collect{it.id}}.")
+        def all_matched = []
+
+        matches.each { mti ->
+
+          def full_match = true
+
+          results['ids'].each { rid ->
+            mti.ids.each { mid ->
+              if ( rid.namespace == mid.namespace && rid.value != mid.value ) {
+                if ( !mti.ids.contains(rid) ) {
+                  full_match = false
+                }
+              }
+            }
+          }
+
+          if ( full_match ) {
+            all_matched.add(mti)
+          }
+
+        }
+
+        switch ( all_matched.size() ) {
+          case 0 :
+            log.debug("Multiple matches for a single identifier. No matches for all class ones. Creating new TI!")
+
+            if ( newTitleClassName == null ) {
+              the_title = new TitleInstance(name:metadata.title, normname:KBComponent.generateNormname(metadata.title), ids:[])
+            }
+            else {
+              def clazz = Class.forName(newTitleClassName)
+              the_title = clazz.newInstance()
+              the_title.name = metadata.title
+              the_title.normname = KBComponent.generateNormname(metadata.title)
+              the_title.ids = []
+            }
+
+            ReviewRequest.raise(
+              the_title,
+              "New TI created.",
+              "Multiple TitleInstances ${matches} were matched on one identifier, but none matched for all given IDs.",
+              user,
+              project
+            )
+            break;
+
+          case 1 :
+            log.debug("One match for all identifiers")
+            the_title = all_matched[0]
+
+            if(!the_title.name.equals(metadata.title)){
+              the_title.addVariantTitle(metadata.title)
+            }
+            break;
+
+          default :
+            log.debug("Multiple matches for given ingest identifiers. Trying to match by name..")
+
+            def matched_with_name = []
+
+            all_matched.each { mti ->
+              if ( mti.name.equals(metadata.title) || mti.normname?.equals(KBComponent.generateNormname(metadata.title)) ) {
+                matched_with_name.add(mti)
+              }
+            }
+
+            if ( matched_with_name.size() == 1 ){
+              log.debug("Only one matched TI (${matched_with_name[0]}) has the same name!")
+              the_title = matched_with_name[0]
+            }
+            else {
+              log.debug("Could not match a specific title. Skipping..")
+            }
+            break;
+        }
         break;
     }
 
@@ -334,6 +465,10 @@ class TitleLookupService {
 
       // Make sure we're all saved before looking up the publisher
       the_title.save(flush:true, failOnError:true);
+      
+      if(the_title.name.startsWith("Unknown Title")){
+        the_title.status = RefdataCategory.lookupOrCreate(KBComponent.RD_STATUS, 'Expected')
+      }
 
       // Add the publisher.
       addPublisher(metadata.publisher_name, the_title, user, project)
@@ -344,32 +479,36 @@ class TitleLookupService {
       ids_to_add.addAll(results['ids'])
       ids_to_add.addAll(results['other_identifiers'])
 
-      ids_to_add.each {
-        if ( ! the_title.ids.contains(it) ) {
+      def id_combo_type = RefdataCategory.lookupOrCreate('Combo.Type', 'KBComponent.Ids')
 
-          log.debug("Titles ${the_title.id} does not already contain identifier ${it.id}. See if adding it would create a conflict, if not, add it");
+      ids_to_add.each {
+
+        def dupes = Combo.executeQuery("Select c from Combo as c where c.toComponent.id = ? and c.fromComponent.id = ? and c.type.id = ? and c.fromComponent.status.value <> 'Deleted'",[it.id,the_title.id,id_combo_type.id]);
+
+        if ( !dupes || dupes.size() == 0) {
+
+//           log.debug("Titles ${the_title.id} does not already contain identifier ${it.id}. See if adding it would create a conflict, if not, add it");
 
           // Double check the identifier we are about to add does not already exist attached to another item in the system
           // Combo.Type : KBComponent.Ids
-          def id_combo_type = RefdataCategory.lookupOrCreate('Combo.Type', 'KBComponent.Ids')
-          def existing_identifier = Combo.executeQuery("Select c.id from Combo as c where c.toComponent.id = ? and c.type.id = ?",[it.id,id_combo_type.id]);
-          if ( existing_identifier.size() > 0 ) {
-            ReviewRequest.raise(
-              the_title,
-              "Adding an identifier(${it.id}) to this title would create a duplicate record",
-              "The ingest file suggested an identifier (${it.id}) for a title which conflicts with a record already in the system (combo ${existing_identifier[0]})",
-              user,
-              project
-            )
-            // We have to save the title as this modifies the revreq collections
-            the_title.save(flush:true, failOnError:true);
-          }
-          else {
-            log.debug("Adding identifier to title");
-            Combo new_id = new Combo(toComponent:it, fromComponent:the_title, type:id_combo_type).save(flush:true, failOnError:true);
-            // the_title.ids.add(it);
-            // the_title.save(flush:true, failOnError:true);
-          }
+
+//           def existing_identifier = Combo.executeQuery("Select c from Combo as c where c.toComponent.id = ? and c.type.id = ? and c.fromComponent.status.value <> 'Deleted'",[it.id,id_combo_type.id]);
+
+//           if ( existing_identifier.size() > 0 ) {
+//             ReviewRequest.raise(
+//               the_title,
+//               "Identifier not unique",
+//               "The ingest file suggested an identifier (${it.id}) for a title which is already connected with another record in the system (component ${existing_identifier[0].fromComponent})",
+//               user,
+//               project
+//             )
+//           }
+          
+          log.debug("Adding new identifier ${it} to title ${the_title}");
+          Combo new_id = new Combo(toComponent:it, fromComponent:the_title, type:id_combo_type).save(flush:true, failOnError:true);
+        }
+        else {
+          log.debug("Identifier ${it} is already connected to the title!");
         }
       }
 
@@ -398,7 +537,7 @@ class TitleLookupService {
       log.debug("Add publisher \"${publisher_name}\"")
       Org publisher = componentLookupService.lookupComponent(publisher_name)
       
-      if (publisher == null) {
+      if ( !publisher ) {
         // Lookup using norm name.
         def norm_pub_name = Org.generateNormname(publisher_name);
         
@@ -406,9 +545,9 @@ class TitleLookupService {
         publisher = Org.findByNormname(norm_pub_name)
       }      
 
-      if ( publisher == null ) {
+      if ( !publisher || publisher.status.value == 'Deleted') {
         def variant_normname = GOKbTextUtils.normaliseString(publisher_name)
-        def candidate_orgs = Org.executeQuery("select distinct o from Org as o join o.variantNames as v where v.normVariantName = ?",[variant_normname]);
+        def candidate_orgs = Org.executeQuery("select distinct o from Org as o join o.variantNames as v where v.normVariantName = ? and o.status.value <> 'Deleted'",[variant_normname]);
         if ( candidate_orgs.size() == 1 ) {
           publisher = candidate_orgs[0]
         }

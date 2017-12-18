@@ -351,7 +351,8 @@ identifiers = [
     "eissn",
     "doi",
     "isbn",
-    "issnl"
+    "issnl",
+    "zdb"
   ],
 
   // Class ones that need to be cross-checked. If an Identifier supplied as an ISSN,
@@ -377,6 +378,8 @@ identifiers = [
 project_dir = new java.io.File(org.codehaus.groovy.grails.io.support.GrailsResourceUtils.GRAILS_APP_DIR + "/../project-files/").getCanonicalPath() + "/"
 
 refine_min_version = "3.0.0"
+
+// ftupdate_enabled = true
 
 // Config for the refine extension build process.
 refine = [
@@ -549,6 +552,9 @@ log4j = {
             'grails.app.jobs',
             'com.k_int',
             'org.gokb.cred.RefdataCategory',
+            'org.gokb.cred.TitleInstancePackagePlatform',
+            'org.gokb.cred.Platform',
+            'org.gokb.IntegrationController',
             'com.k_int.apis',
             'com.k_int.asset.pipeline.groovy',
             'asset.pipeline.less.compilers',
@@ -586,8 +592,8 @@ grails.plugin.springsecurity.filterChain.chainMap = [
 ]
 
 grails.plugin.springsecurity.controllerAnnotations.staticRules = [
-  '/admin/**':                ['ROLE_SUPERUSER', 'IS_AUTHENTICATED_FULLY'],
-  '/file/**':                 ['ROLE_SUPERUSER', 'IS_AUTHENTICATED_FULLY'],
+  '/admin/**':                ['ROLE_ADMIN', 'IS_AUTHENTICATED_FULLY'],
+  '/file/**':                 ['ROLE_ADMIN', 'IS_AUTHENTICATED_FULLY'],
   '/monitoring/**':           ['ROLE_SUPERUSER', 'IS_AUTHENTICATED_FULLY'],
   '/':                        ['permitAll'],
   '/index':                   ['permitAll'],
@@ -596,17 +602,21 @@ grails.plugin.springsecurity.controllerAnnotations.staticRules = [
   '/packages/**':             ['permitAll'],
   '/public/**':               ['permitAll'],
   '/globalSearch/**':         ['ROLE_USER'],
+  '/home/**':                 ['ROLE_USER'],
   '/assets/**':               ['permitAll'],
   '/**/js/**':                ['permitAll'],
   '/**/css/**':               ['permitAll'],
   '/**/images/**':            ['permitAll'],
   '/**/favicon.ico':          ['permitAll'],
+  '/api/find':                ['permitAll'],
+  '/api/suggest':             ['permitAll'],
   '/api/esconfig':            ['permitAll'],
   '/api/capabilities':        ['permitAll'],
   '/api/downloadUpdate':      ['permitAll'],
   '/api/checkUpdate':         ['permitAll'],
   '/api/isUp':                ['permitAll'],
   '/api/userData':            ['permitAll'],
+  '/fwk/**':                  ['ROLE_USER'],
   '/user/**':                 ['ROLE_SUPERUSER', 'IS_AUTHENTICATED_FULLY'],
   '/role/**':                 ['ROLE_SUPERUSER', 'IS_AUTHENTICATED_FULLY'],
   '/securityInfo/**':         ['ROLE_SUPERUSER', 'IS_AUTHENTICATED_FULLY'],
@@ -616,7 +626,8 @@ grails.plugin.springsecurity.controllerAnnotations.staticRules = [
   '/aclObjectIdentity/**':    ['ROLE_SUPERUSER', 'IS_AUTHENTICATED_FULLY'],
   '/aclEntry/**':             ['ROLE_SUPERUSER', 'IS_AUTHENTICATED_FULLY'],
   '/oai':                     ['permitAll'],
-  '/oai/**':                  ['permitAll']
+  '/oai/**':                  ['permitAll'],
+  '/coreference/**':          ['permitAll']
 ]
 
 
@@ -955,8 +966,8 @@ globalSearchTemplates = [
         ],
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted',
-         'qparam':'qp_showDeleted', 'default':'on']
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Current', 'negate' : false, 'prompt':'Only Current',
+         'qparam':'qp_onlyCurrent', 'default':'on']
       ],
       qbeResults:[
         [heading:'Type', property:'class.simpleName'],
@@ -980,6 +991,13 @@ globalSearchTemplates = [
           contextTree:['ctxtp':'qry', 'comparator' : 'ilike', 'prop':'name', 'wildcard':'B', normalise:false]
         ],
         [
+          prompt:'Identifier',
+          qparam:'qp_identifier',
+          placeholder:'Identifier Value',
+          contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'ids.value'],
+          hide:false
+        ],
+        [
           type:'lookup',
           baseClass:'org.gokb.cred.Org',
           prompt:'Provider',
@@ -990,8 +1008,8 @@ globalSearchTemplates = [
         ],
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted',
-         'qparam':'qp_showDeleted', 'default':'on']
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Current', 'negate' : false, 'prompt':'Only Current',
+         'qparam':'qp_onlyCurrent', 'default':'on']
       ],
       qbeResults:[
         [heading:'Provider', property:'provider?.name'],
@@ -1021,8 +1039,8 @@ globalSearchTemplates = [
         ],
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted',
-         'qparam':'qp_showDeleted', 'default':'on']
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Current', 'negate' : false, 'prompt':'Only Current',
+         'qparam':'qp_onlyCurrent', 'default':'on']
       ],
       qbeResults:[
         [heading:'Name', property:'name',sort:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
@@ -1044,10 +1062,21 @@ globalSearchTemplates = [
           placeholder:'Name or title of item',
           contextTree:['ctxtp':'qry', 'comparator' : 'ilike', 'prop':'name']
         ],
+        [
+          type:'lookup',
+          baseClass:'org.gokb.cred.RefdataValue',
+          filter1:'KBComponent.Status',
+          prompt:'Status',
+          qparam:'qp_status',
+          placeholder:'Component Status',
+          contextTree:['ctxtp':'qry', 'comparator' : 'eq', 'prop':'status'],
+          // II: Default not yet implemented
+          default:[ type:'query', query:'select r from RefdataValue where r.value=:v and r.owner.description=:o', params:['Current','KBComponent.Status'] ]
+        ],
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted',
-         'qparam':'qp_showDeleted', 'default':'on']
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Current', 'negate' : false, 'prompt':'Only Current',
+         'qparam':'qp_onlyCurrent', 'default':'on']
       ],
       qbeResults:[
         [heading:'Name/Title', property:'name', sort:'name',link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
@@ -1061,7 +1090,7 @@ globalSearchTemplates = [
     group:'Secondary',
     // defaultSort:'name',
     // defaultOrder:'asc',
-    // useDistinct=true,
+    useDistinct: true,
     qbeConfig:[
       qbeForm:[
         [
@@ -1118,14 +1147,16 @@ globalSearchTemplates = [
         // ],
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted',
-         'qparam':'qp_showDeleted', 'default':'on']
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Current', 'negate' : false, 'prompt':'Only Current',
+         'qparam':'qp_onlyCurrent', 'default':'on']
       ],
       qbeResults:[
         [heading:'ID', property:'id', link:[controller:'resource',action:'show',id:'x.r?.class?.name+\':\'+x.r?.id'],sort:'name' ],
         [heading:'Name/Title', property:'name', link:[controller:'resource',action:'show',id:'x.r?.class?.name+\':\'+x.r?.id'],sort:'name' ],
         [heading:'Type', property:'class?.simpleName'],
         [heading:'Status', property:'status.value',sort:'status'],
+        [heading:'Date Created', property:'dateCreated',sort:'dateCreated'],
+        [heading:'Last Updated', property:'lastUpdated',sort:'lastUpdated'],
       ]
     ]
   ],
@@ -1209,6 +1240,12 @@ globalSearchTemplates = [
           contextTree:['ctxtp':'qry', 'comparator' : 'eq', 'prop':'pkg']
         ],
         [
+          prompt:'Platform ID',
+          qparam:'qp_plat_id',
+          placeholder:'Platform ID',
+          contextTree:['ctxtp' : 'qry', 'comparator' : 'eq', 'prop' : 'hostPlatform.id', 'type' : 'java.lang.Long']
+        ],
+        [
           type:'lookup',
           baseClass:'org.gokb.cred.Platform',
           prompt:'Platform',
@@ -1216,10 +1253,21 @@ globalSearchTemplates = [
           placeholder:'Platform',
           contextTree:['ctxtp':'qry', 'comparator' : 'eq', 'prop':'hostPlatform']
         ],
+        [
+          type:'lookup',
+          baseClass:'org.gokb.cred.RefdataValue',
+          filter1:'KBComponent.Status',
+          prompt:'Status',
+          qparam:'qp_status',
+          placeholder:'Status',
+          contextTree:['ctxtp':'qry', 'comparator' : 'eq', 'prop':'status'],
+          // II: Default not yet implemented
+          default:[ type:'query', query:'select r from RefdataValue where r.value=:v and r.owner.description=:o', params:['Current','KBComponent.Status'] ]
+        ],
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted',
-         'qparam':'qp_showDeleted', 'default':'on']
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Current', 'negate' : false, 'prompt':'Only Current',
+         'qparam':'qp_onlyCurrent', 'default':'on']
       ],
       qbeResults:[
         [heading:'TIPP Persistent Id', property:'persistentId', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
@@ -1298,8 +1346,6 @@ globalSearchTemplates = [
         ]
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted',
-         'qparam':'qp_showDeleted', 'default':'on']
       ],
       qbeResults:[
         [heading:'Cause', property:'descriptionOfCause', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id']],
@@ -1307,7 +1353,7 @@ globalSearchTemplates = [
         [heading:'Status', property:'status?.value'],
         [heading:'Raised By', property:'raisedBy?.username'],
         [heading:'Allocated To', property:'allocatedTo?.username'],
-        [heading:'Timestamp', property:'dateCreated'],
+        [heading:'Timestamp', property:'dateCreated', sort:'dateCreated'],
         [heading:'Project', property:'refineProject?.name', link:[controller:'resource', action:'show', id:'x.r.refineProject?.class?.name+\':\'+x.r.refineProject?.id']],
       ]
     ]
@@ -1326,8 +1372,8 @@ globalSearchTemplates = [
         ],
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted',
-         'qparam':'qp_showDeleted', 'default':'on']
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Current', 'negate' : false, 'prompt':'Only Current',
+         'qparam':'qp_onlyCurrent', 'default':'on']
       ],
       qbeResults:[
         [heading:'Name/Title', property:'name',sort:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
@@ -1349,8 +1395,8 @@ globalSearchTemplates = [
         ],
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted',
-         'qparam':'qp_showDeleted', 'default':'on']
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Current', 'negate' : false, 'prompt':'Only Current',
+         'qparam':'qp_onlyCurrent', 'default':'on']
       ],
       qbeResults:[
         [heading:'Name/Title', property:'name',sort:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
@@ -1394,8 +1440,8 @@ globalSearchTemplates = [
         ],
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted',
-         'qparam':'qp_showDeleted', 'default':'on']
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Current', 'negate' : false, 'prompt':'Only Current',
+         'qparam':'qp_onlyCurrent', 'default':'on']
       ],
       qbeResults:[
         [heading:'Name/Title', property:'name', sort:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
@@ -1424,6 +1470,26 @@ globalSearchTemplates = [
       ]
     ]
   ],
+  'UserOrganisation':[
+    baseclass:'org.gokb.cred.UserOrganisation',
+    title:'User Organisations',
+    group:'Secondary',
+    qbeConfig:[
+      qbeForm:[
+        [
+          prompt:'Name',
+          qparam:'qp_name',
+          placeholder:'Username',
+          contextTree:['ctxtp':'qry', 'comparator' : 'ilike', 'prop':'username']
+        ],
+      ],
+      qbeGlobals:[
+      ],
+      qbeResults:[
+        [heading:'Name', property:'displayName', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
+      ]
+    ]
+  ],
   'Sources':[
     baseclass:'org.gokb.cred.Source',
     title:'Source',
@@ -1438,8 +1504,8 @@ globalSearchTemplates = [
         ],
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted',
-         'qparam':'qp_showDeleted', 'default':'on']
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Current', 'negate' : false, 'prompt':'Only Current',
+         'qparam':'qp_onlyCurrent', 'default':'on']
       ],
       qbeResults:[
         [heading:'ID', property:'id', sort:'id', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'] ],
@@ -1624,24 +1690,24 @@ globalSearchTemplates = [
           contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'publisher'],
           hide:true
         ],
-	[
-	  type:'lookup',
-	  baseClass:'org.gokb.cred.Person',
-	  prompt:'Person',
-	  qparam:'qp_person',
-	  placeholder:'Person',
-	  contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'people.person'],
-	  hide:true
-	],
-	[
-	  type:'lookup',
-	  baseClass:'org.gokb.cred.Subject',
-	  prompt:'Subject',
-	  qparam:'qp_subject',
-	  placeholder:'Subject',
-	  contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'subjects.subject'],
-	  hide:true
-	],
+        [
+          type:'lookup',
+          baseClass:'org.gokb.cred.Person',
+          prompt:'Person',
+          qparam:'qp_person',
+          placeholder:'Person',
+          contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'people.person'],
+          hide:true
+        ],
+        [
+          type:'lookup',
+          baseClass:'org.gokb.cred.Subject',
+          prompt:'Subject',
+          qparam:'qp_subject',
+          placeholder:'Subject',
+          contextTree:[ 'ctxtp':'qry', 'comparator' : 'eq', 'prop':'subjects.subject'],
+          hide:true
+        ],
         [
           type:'lookup',
           baseClass:'org.gokb.cred.Org',
@@ -1653,8 +1719,8 @@ globalSearchTemplates = [
         ],
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted', 
-         'qparam':'qp_showDeleted', 'default':'on']
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Current', 'negate' : false, 'prompt':'Only Current',
+         'qparam':'qp_onlyCurrent', 'default':'on']
       ],
       qbeResults:[
         [heading:'Title', property:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'],sort:'name' ],
@@ -1687,8 +1753,8 @@ globalSearchTemplates = [
         ],
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted', 
-         'qparam':'qp_showDeleted', 'default':'on']
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Current', 'negate' : false, 'prompt':'Only Current',
+         'qparam':'qp_onlyCurrent', 'default':'on']
       ],
       qbeResults:[
         [heading:'Title', property:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'],sort:'name' ],
@@ -1712,8 +1778,8 @@ globalSearchTemplates = [
         ],
       ],
       qbeGlobals:[
-        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Deleted', 'negate' : true, 'prompt':'Hide Deleted', 
-         'qparam':'qp_showDeleted', 'default':'on']
+        ['ctxtp':'filter', 'prop':'status.value', 'comparator' : 'eq', 'value':'Current', 'negate' : false, 'prompt':'Only Current',
+         'qparam':'qp_onlyCurrent', 'default':'on']
       ],
       qbeResults:[
         [heading:'Title', property:'name', link:[controller:'resource',action:'show',id:'x.r.class.name+\':\'+x.r.id'],sort:'name' ],
@@ -1820,7 +1886,7 @@ grails.plugin.springsecurity.ui.password.maxLength = 64
 grails.plugin.springsecurity.ui.password.validationRegex = '^.*$'
 
 //configure register
-grails.plugin.springsecurity.ui.register.emailFrom = "GOKb<no-reply@gokb.k-int.com>"
+grails.plugin.springsecurity.ui.register.emailFrom = "GOKb<no-reply@gokb.org>"
 grails.plugin.springsecurity.ui.register.emailSubject = 'Welcome to GOKb'
 grails.plugin.springsecurity.ui.register.defaultRoleNames = [
   "ROLE_USER"
@@ -1937,28 +2003,27 @@ beans {
 //     'My-Custom-Header': 'some value'
 
 // Uncomment and edit the following lines to start using Grails encoding & escaping improvements
-
-/* remove this line
- // GSP settings
- grails {
+// GSP settings
+grails {
  views {
- gsp {
- encoding = 'UTF-8'
- htmlcodec = 'xml' // use xml escaping instead of HTML4 escaping
- codecs {
- expression = 'html' // escapes values inside null
- scriptlet = 'none' // escapes output from scriptlets in GSPs
- taglib = 'none' // escapes output from taglibs
- staticparts = 'none' // escapes output from static template parts
+  gsp {
+    encoding = 'UTF-8'
+    htmlcodec = 'xml' // use xml escaping instead of HTML4 escaping
+    codecs {
+      expression = 'html' // escapes values inside null
+      scriptlet = 'none' // escapes output from scriptlets in GSPs
+      taglib = 'none' // escapes output from taglibs
+      staticparts = 'none' // escapes output from static template parts
+    }
+  }
+  // escapes all not-encoded output at final stage of outputting
+//   filteringCodecForContentType {
+//   //'text/html' = 'html'
+//   }
  }
- }
- // escapes all not-encoded output at final stage of outputting
- filteringCodecForContentType {
- //'text/html' = 'html'
- }
- }
- }
- remove this line */
+}
+
+fileViewer.grails.views.gsp.codecs.expression = "none"
 
 
 // Added by the Audit-Logging plugin:

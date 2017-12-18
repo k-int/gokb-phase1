@@ -1208,11 +1208,18 @@ abstract class KBComponent {
     def result = [deleteType:this.class.name, deleteId:this.id]
     log.debug("Removing all components");
     Combo.executeUpdate("delete from Combo as c where c.fromComponent=:component or c.toComponent=:component",[component:this])
+    ComponentWatch.executeUpdate("delete from ComponentWatch as cw where cw.component=:component",[component:this])
     KBComponentAdditionalProperty.executeUpdate("delete from KBComponentAdditionalProperty as c where c.fromComponent=:component",[component:this]);
     KBComponentVariantName.executeUpdate("delete from KBComponentVariantName as c where c.owner=:component",[component:this]);
 
     ReviewRequestAllocationLog.executeUpdate("delete from ReviewRequestAllocationLog as c where c.rr in ( select r from ReviewRequest as r where r.componentToReview=:component)",[component:this]);
-    ComponentHistoryEventParticipant.executeUpdate("delete from ComponentHistoryEventParticipant as c where c.participant = :component",[component:this]);
+    def events_to_delete = ComponentHistoryEventParticipant.executeQuery("select c.event from ComponentHistoryEventParticipant as c where c.participant = :component",[component:this])
+
+    events_to_delete.each {
+      ComponentHistoryEventParticipant.executeUpdate("delete from ComponentHistoryEventParticipant as c where c.event = ?",[it])
+      ComponentHistoryEvent.executeUpdate("delete from ComponentHistoryEvent as c where c.id = ?", [it.id])
+    }
+//     ComponentHistoryEventParticipant.executeUpdate("delete from ComponentHistoryEventParticipant as c where c.participant = :component",[component:this]);
 
     ReviewRequest.executeUpdate("delete from ReviewRequest as c where c.componentToReview=:component",[component:this]);
     ComponentPerson.executeUpdate("delete from ComponentPerson as c where c.component=:component",[component:this]);
@@ -1237,8 +1244,8 @@ abstract class KBComponent {
       cids?.each { tid ->
         builder.'identifier' ('namespace':tid?.namespace?.value, 'value':tid?.value)
       }
-      if ( grailsApplication.config.serverUrl ) {
-        builder.'identifier' ('namespace':'originEditUrl', 'value':"${grailsApplication.config.serverUrl}/resource/show/${cName}:${id}")
+      if ( grailsApplication.config.serverUrl || grailsApplication.config.baseUrl ) {
+        builder.'identifier' ('namespace':'originEditUrl', 'value':"${grailsApplication.config.serverUrl ?: grailsApplication.config.baseUrl}/resource/show/${cName}:${id}")
       }
     }
     
@@ -1281,7 +1288,7 @@ abstract class KBComponent {
             builder.'filesize' (fa.filesize)
             builder.'doctype' (fa.doctype)
             builder.'content' {
-              builder.mkp.yieldUnescaped "<![CDATA[${fa.fileData.encodeBase64().toString()}]]>"
+              builder.'mkp'.yieldUnescaped "<![CDATA[${fa.fileData.encodeBase64().toString()}]]>"
             }
           }
         }

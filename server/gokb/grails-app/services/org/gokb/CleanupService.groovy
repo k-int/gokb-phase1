@@ -105,10 +105,12 @@ class CleanupService {
           def expunge_result = component.expunge();
           log.debug(expunge_result);
           esclient.deleteAsync {
+          def es_response = esclient.delete {
             index 'gokb'
             type 'component'
             id c_id
           }
+          log.debug(es_response)
           result.report.add(expunge_result)
         }
       }
@@ -129,8 +131,6 @@ class CleanupService {
     def result = expungeByIds(delete_candidates)
 
     log.debug("Done");
-
-    return result
   }
   
   def housekeeping() {
@@ -160,6 +160,7 @@ class CleanupService {
     catch ( Exception e ) {
       e.printStackTrace()
     }
+    return new Date();
   }
   
   private final def duplicateIdentifierCleanup = {
