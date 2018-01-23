@@ -5,9 +5,9 @@
   @Grab(group='net.sourceforge.nekohtml', module='nekohtml', version='1.9.14'),
   @Grab(group='javax.mail', module='mail', version='1.4.7'),
   @Grab(group='net.sourceforge.htmlunit', module='htmlunit', version='2.21'),
-  @Grab(group='org.codehaus.groovy.modules.http-builder', module='http-builder', version='0.7.2'),
-  @Grab(group='org.apache.httpcomponents', module='httpclient', version='4.5.2'),
-  @Grab(group='org.apache.httpcomponents', module='httpmime', version='4.5.2'),
+  @Grab(group='org.codehaus.groovy.modules.http-builder', module='http-builder', version='0.7.1'),
+  @Grab(group='org.apache.httpcomponents', module='httpclient', version='4.5.4'),
+  @Grab(group='org.apache.httpcomponents', module='httpmime', version='4.5.4'),
   @Grab(group='commons-net', module='commons-net', version='3.5'),
   @GrabExclude('org.codehaus.groovy:groovy-all')
 ])
