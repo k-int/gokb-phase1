@@ -59,8 +59,8 @@ grails.project.dependency.resolution = {
     dependencies {
         // specify dependencies here under either 'build', 'compile', 'runtime', 'test' or 'provided' scopes eg.
         // r untime 'mysql:mysql-connector-java:5.1.38'
-        // runtime 'org.mariadb.jdbc:mariadb-java-client:1.4.5'
-        runtime  group: 'postgresql', name: 'postgresql', version: '9.1-901-1.jdbc4'
+        // runtime 'org.mariadb.jdbc:mariadb-java-client:1.4.5'9.1-901-1.jdbc4
+        runtime group: 'org.postgresql', name: 'postgresql', version: '42.2.0'
         // To allow us to un-tgz uploaded data files
         runtime 'org.apache.commons:commons-compress:1.9'
         // runtime 'commons-collections:commons-collections:3.2.2'
