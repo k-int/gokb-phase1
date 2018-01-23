@@ -3,6 +3,7 @@ package org.gokb.cred
 import javax.persistence.Transient
 import groovy.util.logging.Log4j
 import com.k_int.ClassUtils
+import org.gokb.GOKbTextUtils
 
 
 import org.gokb.refine.*
@@ -445,7 +446,9 @@ select tipp.id,
         result.provider = prov;
         changed = true
       }else{
+
         def variant_normname = GOKbTextUtils.normaliseString(packageHeaderDTO.nominalProvider)
+
         def candidate_orgs = Org.executeQuery("select distinct o from Org as o join o.variantNames as v where v.normVariantName = ?",[variant_normname]);
 
         if ( candidate_orgs.size() == 1 ) {
